@@ -99,3 +99,44 @@ def test_func2(a, b):
             ans = ans + 1
             j = j - 1
         i = i - 1
+
+@verify(
+    inputs=[
+        ('a', typecheck.types.TINT),
+        ('b', typecheck.types.TINT)
+    ],
+    requires=[],
+    ensures=[
+        'a < b ==> (ans == b)',
+        'b < a ==> (ans == a)'
+    ]
+)
+def Max_Func(a, b):
+    ans = a
+    if a < b:
+        ans = b
+    return ans
+
+@verify(
+    inputs=[
+        ('n', typecheck.types.TINT)
+    ],
+    requires=[
+        'n >= 0'
+    ],
+    ensures=[
+        'ans == ((0 + n) * n) // 2'
+    ]
+)
+def Summation(n):
+    ans = 0
+    i = 0
+    while i <= n:
+        invariant('i <= n + 1')
+        invariant('i >= 0')
+        invariant('n >= 0')
+        invariant('ans >= 0')
+        invariant('i > 0 ==> ans == ((0 + (i - 1)) * (i - 1)) // 2')
+        ans = ans + i
+        i = i + 1
+    return ans

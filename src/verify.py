@@ -84,18 +84,18 @@ def verify_func(func, inputs, pre_cond, post_cond):
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
     sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
-    pre_cond.append('True')
-    post_cond.append('True')
     fold_and_str = lambda x, y: BinOp(parse_asserstion(x) if isinstance(x, str) else x,
                                 BoolOps.And, parse_asserstion(y) if isinstance(y, str) else y)
-    fold_and = lambda x, y: BinOp(x, BoolOps.And, y)
 
-    user_precond = reduce(fold_and_str, pre_cond)
-    user_postcond = reduce(fold_and_str, post_cond)
+    user_precond = reduce(fold_and_str, pre_cond) if len(pre_cond) >= 2 \
+                   else parse_asserstion(pre_cond[0]) \
+                        if len(pre_cond) > 0 else Literal(VBool(True))
+    user_postcond = reduce(fold_and_str, post_cond) if len(post_cond) >= 2 \
+                   else parse_asserstion(post_cond[0]) \
+                        if len(post_cond) > 0 else Literal(VBool(True))
 
     (P, C) = wp(target_language_ast, user_postcond)
     check_P = BinOp(user_precond, BoolOps.Implies, P)
-    check_C = reduce(fold_and, C)
 
     solver = z3.Solver()
     translator = Expr2Z3(declare_consts(sigma))
