@@ -46,17 +46,17 @@ class ASTBuilder:
 class ProcessInt(ASTBuilder):
     
     def makeAST(self):
-        return syntax.Literal (syntax.VInt(self.value[0]))
+        return syntax.Literal (syntax.VInt(self.value))
 
 class ProcessBool(ASTBuilder):
     
     def makeAST(self):
-        return syntax.Literal (syntax.VBool(self.value[0]))
+        return syntax.Literal (syntax.VBool(self.value))
 
 class ProcessVar(ASTBuilder):
     
     def makeAST(self):
-        return syntax.Var(self.value[0])
+        return syntax.Var(self.value)
 
 class ProcessUnOp(ASTBuilder):
     def __init__(self, tokens):

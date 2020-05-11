@@ -3,7 +3,7 @@ import z3
 import inspect
 from typing import List, Tuple, TypeVar
 from parser.syntax import *
-from parser import parse_asserstion
+from parser import parse_asserstion, parse_expr
 from functools import wraps
 from transformer import *
 from functools import reduce
@@ -54,7 +54,6 @@ def wp_while(stmt, Q):
     invars = stmt.invariants
     combined_invars = Literal (VBool (True)) if not invars \
                       else reduce(lambda i1, i2: BinOp(i1, BoolOps.And, i2), invars)
-    
     (p, c) = wp(s, combined_invars)
     return (combined_invars, c.union({
         BinOp(BinOp(combined_invars, BoolOps.And, cond), BoolOps.Implies, cond),
@@ -71,12 +70,24 @@ def wp(stmt, Q):
         If:     lambda: wp_if(stmt, Q)
     }.get(type(stmt), (None, None))()
 
+def emit_smt(translator: Expr2Z3, solver, constraint : Expr):
+    solver.push()
+    const = translator.visit(UnOp(BoolOps.Not, constraint))
+    solver.add(const)
+    if str(solver.check()) == 'sat':
+        model = solver.model()
+        raise Exception(f'VerificationViolated on\n{const}\nModel: {model}')
+    solver.pop()
+
 def verify_func(func, inputs, pre_cond, post_cond):
     code = inspect.getsource(func)
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
     sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
-    fold_and_str = lambda x, y: BinOp(parse_asserstion(x), BoolOps.And, parse_asserstion(y))
+    pre_cond.append('True')
+    post_cond.append('True')
+    fold_and_str = lambda x, y: BinOp(parse_asserstion(x) if isinstance(x, str) else x,
+                                BoolOps.And, parse_asserstion(y) if isinstance(y, str) else y)
     fold_and = lambda x, y: BinOp(x, BoolOps.And, y)
 
     user_precond = reduce(fold_and_str, pre_cond)
@@ -86,9 +97,23 @@ def verify_func(func, inputs, pre_cond, post_cond):
     check_P = BinOp(user_precond, BoolOps.Implies, P)
     check_C = reduce(fold_and, C)
 
-    print(check_P)
-    print(check_C)
+    solver = z3.Solver()
+    translator = Expr2Z3(declare_consts(sigma))
 
+    emit_smt(translator, solver, check_P)
+    for c in C:
+        emit_smt(translator, solver, c)
+    print('Verified!')
+
+
+def declare_consts(sigma : dict):
+    consts = dict()
+    for (name, ty) in sigma.items():
+        consts[name] = {
+            tc.types.TINT: lambda:  z3.Int(name),
+            tc.types.TBOOL: lambda: z3.Bool(name)
+        }.get(ty)()
+    return consts
 
 def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str], ensures: List[str]):
     def verify_impl(func):

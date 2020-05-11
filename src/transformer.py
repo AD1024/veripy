@@ -1,4 +1,5 @@
 import ast
+import z3
 from parser.syntax import *
 from parser import parse_asserstion
 from built_ins import BUILT_INS
@@ -11,7 +12,7 @@ class ExprTranslator:
     def fold_binops(self, op, values):
         result = BinOp(self.visit(values[0]), op, self.visit(values[1]))
         for e in values[2:]:
-            result = BinOp(result, self.visit(e))
+            result = BinOp(result, op, self.visit(e))
         return result
 
     def visit_Name(self, node):
@@ -148,24 +149,46 @@ class StmtTranslator:
 
 class Expr2Z3:
 
+    def __init__(self, name_dict: dict):
+        self.name_dict = name_dict
+
     def visit_Literal(self, lit):
         v = lit.value
         return {
-            VBool: lambda: 'true' if v.v else 'false',
-            VInt: lambda: str(v.v)
+            VBool: lambda: v.v,
+            VInt: lambda: v.v
         }.get(type(v), lambda: raise_exception(f'Unsupported data: {v}'))()
 
     def visit_Var(self, node):
-        return node.name
+        return self.name_dict[node.name]
     
     def visit_BinOp(self, node):
-        if node.op == CompOps.Neq:
-            return f'(not (= {self.visit(node.e1)} {self.visit(node.e2)}))'
-        else:
-            return f'({node.op} {self.visit(node.e1)} {self.visit(node.e2)})'
+        c1 = self.visit(node.e1)
+        c2 = self.visit(node.e2)
+        return {
+            ArithOps.Add: lambda: c1 + c2,
+            ArithOps.Minus: lambda: c1 - c2,
+            ArithOps.Mult: lambda: c1 * c2,
+            ArithOps.IntDiv: lambda: c1 / c2,
+            
+            BoolOps.And: lambda: z3.And(c1, c2),
+            BoolOps.Or: lambda: z3.Or(c1, c2),
+            BoolOps.Implies: lambda: z3.Implies(c1, c2),
+
+            CompOps.Eq: lambda: c1 == c2,
+            CompOps.Neq: lambda: z3.Not(z3.eq(c1, c2)),
+            CompOps.Gt: lambda: c1 > c2,
+            CompOps.Ge: lambda: c1 >= c2,
+            CompOps.Lt: lambda: c1 < c2,
+            CompOps.Le: lambda: c1 <= c2
+        }.get(node.op, lambda: raise_exception(f'Unsupported Operator: {node.op}'))()
     
     def visit_UnOp(self, node):
-        return f'({node.op} {self.visit(node.e)})'
+        c = self.visit(node.e)
+        return {
+            ArithOps.Neg: lambda: -c,
+            BoolOps.Not:  lambda: z3.Not(c)
+        }.get(node.op, lambda: raise_exception(f'Unsupported Operator: {node.op}'))()
 
     def visit(self, expr):
         return {
