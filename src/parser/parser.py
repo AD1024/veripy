@@ -1,29 +1,31 @@
 import sys
-import syntax
+import parser.syntax as syntax
 from functools import reduce
 from pyparsing import *
 
 ParserElement.enablePackrat()
 
-Ops = syntax.Op
+ArithOps = syntax.ArithOps
+CompOps = syntax.CompOps
+BoolOps = syntax.BoolOps
 
 BINOP_DICT = {
-    '+' : Ops.Add,
-    '-' : Ops.Minus,
-    '*' : Ops.Mult,
-    '//': Ops.IntDiv,
+    '+' : ArithOps.Add,
+    '-' : ArithOps.Minus,
+    '*' : ArithOps.Mult,
+    '//': ArithOps.IntDiv,
 
-    '<=' : Ops.Le,
-    '<'  : Ops.Lt,
-    '>=' : Ops.Ge,
-    '>'  : Ops.Gt,
-    '==' : Ops.Eq,
-    '!=' : Ops.Neq,
+    '<=' : CompOps.Le,
+    '<'  : CompOps.Lt,
+    '>=' : CompOps.Ge,
+    '>'  : CompOps.Gt,
+    '==' : CompOps.Eq,
+    '!=' : CompOps.Neq,
 
-    'and' : Ops.And,
-    'or'  : Ops.Or,
-    'not' : Ops.Not,
-    '==>' : Ops.Implies
+    'and' : BoolOps.And,
+    'or'  : BoolOps.Or,
+    'not' : BoolOps.Not,
+    '==>' : BoolOps.Implies
 }
 
 def unpackTokens(tokenlist):
@@ -54,7 +56,7 @@ class ProcessBool(ASTBuilder):
 class ProcessVar(ASTBuilder):
     
     def makeAST(self):
-        return syntax.Literal (syntax.Var(self.value[0]))
+        return syntax.Var(self.value[0])
 
 class ProcessUnOp(ASTBuilder):
     def __init__(self, tokens):
@@ -98,7 +100,7 @@ AND, OR, NOT, IMPLIES = map(Literal, ('and', 'or', 'not', '==>'))
 
 LT, LE, GT, GE, EQ, NEQ = map(Literal, ('<', '<=', '>', '>=', '==', '!='))
 
-atom = INT | VAR
+atom = BOOL | INT | VAR
 
 arith_expr = infixNotation(atom, [
     (NEG, 1, opAssoc.RIGHT, ProcessUnOp),
@@ -128,3 +130,18 @@ bool_expr = infixNotation(
 
 assertion_expr = bool_expr | arith_comp
 expr = assertion_expr | arith_expr
+
+def parse_expr(e):
+    return expr.parseString(e)[0].makeAST()
+
+def parse_asserstion(assertion):
+    return assertion_expr.parseString(assertion)[0].makeAST()
+
+def parse_comparison(comp):
+    return arith_comp.parseString(comp)[0].makeAST()
+
+def parse_bool_expr(bexp):
+    return bool_expr.parseString(bexp)[0].makeAST()
+
+def parse_arith_expr(aexp):
+    return arith_expr.parseString(aexp)[0].makeAST()

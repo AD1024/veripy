@@ -1,23 +1,27 @@
 from enum import Enum
 
-class Op(Enum):
-    Add = 1
-    Minus = 2
-    Mult = 3
-    IntDiv = 4
-    Neg = 5
+class Op: pass
 
-    And = 11
-    Or = 12
-    Not = 13
-    Implies = 14
+class ArithOps(Op, Enum):
+    Add = '+'
+    Minus = '-'
+    Mult = '*'
+    IntDiv = '//'
+    Neg = '-'
 
-    Eq = 21
-    Neq = 22
-    Lt = 23
-    Le = 24
-    Gt = 25
-    Ge = 26
+class CompOps(Op, Enum):
+    Eq = '=='
+    Neq = '!='
+    Lt = '<'
+    Le = '<='
+    Gt = '>'
+    Ge = '>='
+
+class BoolOps(Op, Enum):
+    And = '&&'
+    Or = '||'
+    Not = '!'
+    Implies = '==>'
 
 
 class Value:
