@@ -176,7 +176,7 @@ class Expr2Z3:
             BoolOps.Implies: lambda: z3.Implies(c1, c2),
 
             CompOps.Eq: lambda: c1 == c2,
-            CompOps.Neq: lambda: z3.Not(z3.eq(c1, c2)),
+            CompOps.Neq: lambda: z3.Not(c1 == c2),
             CompOps.Gt: lambda: c1 > c2,
             CompOps.Ge: lambda: c1 >= c2,
             CompOps.Lt: lambda: c1 < c2,
