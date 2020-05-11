@@ -4,11 +4,13 @@ import inspect
 import ast
 import transformer
 from prettyprint import pretty_print
+from verify import *
 
 def func(n):
     y = n
     x = 0
     while y > 0:
+        invariant('y >= 0')
         x = x + 1
         y = y - 1
     assert x == n
@@ -19,6 +21,16 @@ AST = ast.parse(inspect.getsource(func))
 
 T_AST = transformer.StmtTranslator().visit(AST)
 pretty_print(T_AST)
+
+@verify(['n >= 10'], ['x == n'])
+def test_func(n):
+    y = n
+    x = 0
+    while y > 0:
+        invariant('y >= 0')
+        x = x + 1
+        y = y - 1
+    return x
 
 exprs = [
     ('1 + 2 - 3', None),
