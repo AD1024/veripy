@@ -1,12 +1,13 @@
 import ast
 import z3
 import inspect
-from typing import List
+from typing import List, Tuple, TypeVar
 from parser.syntax import *
 from parser import parse_asserstion
 from functools import wraps
 from transformer import *
 from functools import reduce
+import typecheck as tc
 
 def invariant(inv):
     return parse_asserstion(inv)
@@ -70,10 +71,11 @@ def wp(stmt, Q):
         If:     lambda: wp_if(stmt, Q)
     }.get(type(stmt), (None, None))()
 
-def verify_func(func, pre_cond, post_cond):
+def verify_func(func, inputs, pre_cond, post_cond):
     code = inspect.getsource(func)
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
+    sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
     fold_and_str = lambda x, y: BinOp(parse_asserstion(x), BoolOps.And, parse_asserstion(y))
     fold_and = lambda x, y: BinOp(x, BoolOps.And, y)
 
@@ -88,11 +90,11 @@ def verify_func(func, pre_cond, post_cond):
     print(check_C)
 
 
-def verify(requires: List[str], ensures: List[str]):
+def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str], ensures: List[str]):
     def verify_impl(func):
         @wraps(func)
         def caller(*args, **kargs):
             return func(args, kargs)
-        result = verify_func(func, requires, ensures)
+        result = verify_func(func, inputs, requires, ensures)
         return caller
     return verify_impl

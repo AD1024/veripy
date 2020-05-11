@@ -4,7 +4,7 @@ import inspect
 import ast
 import transformer
 from prettyprint import pretty_print
-from verify import *
+from verify import verify, assume, invariant
 
 def func(n):
     y = n
@@ -22,7 +22,7 @@ AST = ast.parse(inspect.getsource(func))
 T_AST = transformer.StmtTranslator().visit(AST)
 pretty_print(T_AST)
 
-@verify(['n >= 10'], ['x == n'])
+@verify([('n', typecheck.types.TINT)], ['n >= 10'], ['x == n'])
 def test_func(n):
     y = n
     x = 0
@@ -33,8 +33,8 @@ def test_func(n):
     return x
 
 exprs = [
-    ('1 + 2 - 3', None),
-    ('1 * (2 + 3 / 5121) * 4', None),
+    ('1 + 2 - 3', dict()),
+    ('1 * (2 + 3 / 5121) * 4', dict()),
     ('(a + b == c) ==> (c == a + b)', {
         'a' : typecheck.types.TINT,
         'b' : typecheck.types.TINT,

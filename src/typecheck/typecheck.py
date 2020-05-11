@@ -1,6 +1,32 @@
 from parser.syntax import *
 from typecheck.types import *
 
+def type_check_stmt(sigma, stmt):
+    if isinstance(stmt, Skip):
+        return sigma
+    if isinstance(stmt, Seq):
+        return type_check_stmt(type_check_stmt(sigma, stmt.s1), stmt.s2)
+    if isinstance(stmt, Assign):
+        ty = type_infer_expr(sigma, stmt.expr)
+        if stmt.var not in sigma:
+            sigma[stmt.var] = ty
+            return sigma
+        else:
+            if sigma[stmt.var] != ty:
+                raise TypeError(f'Mutating Type of {stmt.var}!')
+            return sigma
+    if isinstance(stmt, If):
+        type_check_expr(sigma, TBOOL, stmt.cond)
+        return type_check_stmt(type_check_stmt(sigma, stmt.lb), stmt.rb)
+    if isinstance(stmt, Assert) or isinstance(stmt, Assume):
+        type_check_expr(sigma, TBOOL, stmt.e)
+        return sigma
+    if isinstance(stmt, While):
+        type_check_expr(sigma, TBOOL, stmt.cond)
+        for i in stmt.invariants:
+            type_check_expr(sigma, TBOOL, i)
+        return type_check_stmt(sigma, stmt.body)
+
 def type_check_expr(sigma: dict, expected, expr: Expr):
     actual = type_infer_expr(sigma, expr)
     if actual == expected:
