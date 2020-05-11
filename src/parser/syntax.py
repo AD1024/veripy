@@ -6,11 +6,11 @@ class ArithOps(Op, Enum):
     Add = '+'
     Minus = '-'
     Mult = '*'
-    IntDiv = '//'
+    IntDiv = '/'
     Neg = '-'
 
 class CompOps(Op, Enum):
-    Eq = '=='
+    Eq = '='
     Neq = '!='
     Lt = '<'
     Le = '<='
@@ -18,9 +18,9 @@ class CompOps(Op, Enum):
     Ge = '>='
 
 class BoolOps(Op, Enum):
-    And = '&&'
-    Or = '||'
-    Not = '!'
+    And = 'and'
+    Or = 'or'
+    Not = 'not'
     Implies = '==>'
 
 
@@ -131,8 +131,9 @@ class Assert(Stmt):
         return f'(Assert {self.e})'
 
 class While(Stmt):
-    def __init__(self, cond : Expr, body : Stmt):
+    def __init__(self, invs, cond : Expr, body : Stmt):
         self.cond = cond
+        self.invariants = invs
         self.body = body if body is not None else Skip()
 
     def __repr__(self):
