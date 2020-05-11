@@ -1,1 +1,0 @@
-BUILT_INS = ('invariant', 'assume')

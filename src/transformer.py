@@ -1,7 +1,5 @@
 import ast
 from parser.syntax import *
-from parser import parse_asserstion
-from built_ins import BUILT_INS
 
 def raise_exception(msg):
     raise Exception(msg)
@@ -75,9 +73,6 @@ class ExprTranslator:
 
 class StmtTranslator:
 
-    def __init__(self):
-        self.expr_translator = ExprTranslator()
-
     def make_seq(self, stmts):
         if stmts:
             hd, *stmts = stmts
@@ -90,16 +85,6 @@ class StmtTranslator:
             return t_node
         else:
             return Skip()
-    
-    def visit_Call(self, node):
-        func = node.func.id
-        if func in BUILT_INS:
-            if func == 'assume':
-                return Assume(parse_asserstion(node.args[0].s))
-            if func == 'invariant':
-                return parse_asserstion(node.args[0].s)
-        else:
-            raise Exception('Currently function call is not supported')
     
     def visit_FunctionDef(self, node):
         return self.make_seq(node.body)
@@ -116,14 +101,9 @@ class StmtTranslator:
         return Assign(varname, expr)
 
     def visit_While(self, node):
-        cond = self.expr_translator.visit(node.test)
-        is_invariant = lambda y: isinstance(y, ast.Expr)\
-                                and isinstance(y.value, ast.Call)\
-                                and y.value.func.id == 'invariant'
-        invars = [self.visit_Call(x.value) for x in filter(is_invariant, node.body)]
-        body = self.make_seq(list(filter(lambda x: True if not isinstance(x, ast.Expr) or not isinstance(x.value, ast.Call)
-                                                        else x.value.func.id not in BUILT_INS, node.body)))
-        return While(invars, cond, body)
+        cond = ExprTranslator().visit(node.test)
+        body = self.make_seq(node.body)
+        return While(cond, body)
     
     def visit_If(self, node):
         cond = ExprTranslator().visit(node.test)
@@ -142,35 +122,6 @@ class StmtTranslator:
                 ast.While:       lambda: self.visit_While(node),
                 ast.Assert:      lambda: self.visit_Assert(node),
                 ast.Assign:      lambda: self.visit_Assign(node),
-                ast.Return:      lambda: self.visit_Return(node),
+                ast.Return:      lambda: self.visit_Return(node)
             }.get(type(node), lambda: raise_exception(f'Stmt not supported: {node}'))()
-
-
-class Expr2Z3:
-
-    def visit_Literal(self, lit):
-        v = lit.value
-        return {
-            VBool: lambda: 'true' if v.v else 'false',
-            VInt: lambda: str(v.v)
-        }.get(type(v), lambda: raise_exception(f'Unsupported data: {v}'))()
-
-    def visit_Var(self, node):
-        return node.name
-    
-    def visit_BinOp(self, node):
-        if node.op == CompOps.Neq:
-            return f'(not (= {self.visit(node.e1)} {self.visit(node.e2)}))'
-        else:
-            return f'({node.op} {self.visit(node.e1)} {self.visit(node.e2)})'
-    
-    def visit_UnOp(self, node):
-        return f'({node.op} {self.visit(node.e)})'
-
-    def visit(self, expr):
-        return {
-            Literal: lambda: self.visit_Literal(expr),
-            Var:     lambda: self.visit_Var(expr),
-            BinOp:   lambda: self.visit_BinOp(expr),
-            UnOp:    lambda: self.visit_UnOp(expr)
-        }.get(type(expr), lambda: raise_exception(f'Unsupported AST: {expr}'))()
+        

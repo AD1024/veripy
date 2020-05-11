@@ -22,7 +22,6 @@ def pretty_print_if(level, ast):
 def pretty_print_while(level, ast):
     print_line(level, 'While(')
     print_line(level + 1, ast.cond)
-    print_line(level + 1, f'Invariants: {ast.invariants}')
     pretty_print_impl(level + 1, ast.body)
     print_line(level, ')')
 
