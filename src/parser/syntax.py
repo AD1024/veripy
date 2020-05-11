@@ -22,6 +22,7 @@ class BoolOps(Op, Enum):
     Or = 'or'
     Not = 'not'
     Implies = '==>'
+    Iff = '<==>'
 
 
 class Value:
@@ -81,6 +82,22 @@ class UnOp(Expr):
     
     def __repr__(self):
         return f'(UnOp {self.op} {self.e})'
+
+class Slice(Expr):
+    def __init__(self, lower, upper):
+        self.lower = lower
+        self.upper = upper
+    
+    def __repr__(self):
+        return f'(Slice {self.lower} -> {self.upper})'
+
+class Subscript(Expr):
+    def __init__(self, var, subscript):
+        self.var = var
+        self.subscript = subscript
+    
+    def __repr__(self):
+        return f'(Subscript {self.var} {self.subscript})'
 
 '''
 Translating ASTs

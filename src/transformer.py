@@ -1,7 +1,7 @@
 import ast
 import z3
 from parser.syntax import *
-from parser import parse_asserstion
+from parser import parse_assertion
 from built_ins import BUILT_INS
 
 def raise_exception(msg):
@@ -96,9 +96,9 @@ class StmtTranslator:
         func = node.func.id
         if func in BUILT_INS:
             if func == 'assume':
-                return Assume(parse_asserstion(node.args[0].s))
+                return Assume(parse_assertion(node.args[0].s))
             if func == 'invariant':
-                return parse_asserstion(node.args[0].s)
+                return parse_assertion(node.args[0].s)
         else:
             raise Exception('Currently function call is not supported')
     
@@ -113,7 +113,7 @@ class StmtTranslator:
 
     def visit_Assign(self, node):
         varname = node.targets[0].id
-        expr = ExprTranslator().visit(node.value)
+        expr = self.expr_translator.visit(node.value)
         return Assign(varname, expr)
 
     def visit_While(self, node):
@@ -127,13 +127,13 @@ class StmtTranslator:
         return While(invars, cond, body)
     
     def visit_If(self, node):
-        cond = ExprTranslator().visit(node.test)
+        cond = self.expr_translator.visit(node.test)
         lb = self.make_seq(node.body)
         rb = self.make_seq(node.orelse)
         return If(cond, lb, rb)
     
     def visit_Assert(self, node):
-        return Assert(ExprTranslator().visit(node.test))
+        return Assert(self.expr_translator.visit(node.test))
     
     def visit(self, node):
         return {
@@ -166,21 +166,22 @@ class Expr2Z3:
         c1 = self.visit(node.e1)
         c2 = self.visit(node.e2)
         return {
-            ArithOps.Add: lambda: c1 + c2,
-            ArithOps.Minus: lambda: c1 - c2,
-            ArithOps.Mult: lambda: c1 * c2,
-            ArithOps.IntDiv: lambda: c1 / c2,
+            ArithOps.Add:       lambda: c1 + c2,
+            ArithOps.Minus:     lambda: c1 - c2,
+            ArithOps.Mult:      lambda: c1 * c2,
+            ArithOps.IntDiv:    lambda: c1 / c2,
             
-            BoolOps.And: lambda: z3.And(c1, c2),
-            BoolOps.Or: lambda: z3.Or(c1, c2),
-            BoolOps.Implies: lambda: z3.Implies(c1, c2),
+            BoolOps.And:        lambda: z3.And(c1, c2),
+            BoolOps.Or:         lambda: z3.Or(c1, c2),
+            BoolOps.Implies:    lambda: z3.Implies(c1, c2),
+            BoolOps.Iff:        lambda: z3.And(z3.Implies(c1, c2), z3.Implies(c2, c1)),
 
-            CompOps.Eq: lambda: c1 == c2,
-            CompOps.Neq: lambda: z3.Not(c1 == c2),
-            CompOps.Gt: lambda: c1 > c2,
-            CompOps.Ge: lambda: c1 >= c2,
-            CompOps.Lt: lambda: c1 < c2,
-            CompOps.Le: lambda: c1 <= c2
+            CompOps.Eq:         lambda: c1 == c2,
+            CompOps.Neq:        lambda: z3.Not(c1 == c2),
+            CompOps.Gt:         lambda: c1 > c2,
+            CompOps.Ge:         lambda: c1 >= c2,
+            CompOps.Lt:         lambda: c1 < c2,
+            CompOps.Le:         lambda: c1 <= c2
         }.get(node.op, lambda: raise_exception(f'Unsupported Operator: {node.op}'))()
     
     def visit_UnOp(self, node):

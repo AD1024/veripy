@@ -24,7 +24,7 @@ pretty_print(T_AST)
 
 exprs = [
     ('1 + 2 - 3', dict()),
-    ('1 * (2 + 3 / 5121) * 4 == 10', dict()),
+    ('1 * (2 + 3 // 5121) * 4', dict()),
     ('n >= 1000', dict({'n' : typecheck.types.TINT})),
     ('(a + b == c) ==> (c == a + b)', {
         'a' : typecheck.types.TINT,

@@ -3,14 +3,14 @@ import z3
 import inspect
 from typing import List, Tuple, TypeVar
 from parser.syntax import *
-from parser import parse_asserstion, parse_expr
+from parser import parse_assertion, parse_expr
 from functools import wraps
 from transformer import *
 from functools import reduce
 import typecheck as tc
 
 def invariant(inv):
-    return parse_asserstion(inv)
+    return parse_assertion(inv)
 
 def assume(C):
     if not C:
@@ -84,14 +84,14 @@ def verify_func(func, inputs, pre_cond, post_cond):
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
     sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
-    fold_and_str = lambda x, y: BinOp(parse_asserstion(x) if isinstance(x, str) else x,
-                                BoolOps.And, parse_asserstion(y) if isinstance(y, str) else y)
+    fold_and_str = lambda x, y: BinOp(parse_assertion(x) if isinstance(x, str) else x,
+                                BoolOps.And, parse_assertion(y) if isinstance(y, str) else y)
 
     user_precond = reduce(fold_and_str, pre_cond) if len(pre_cond) >= 2 \
-                   else parse_asserstion(pre_cond[0]) \
+                   else parse_assertion(pre_cond[0]) \
                         if len(pre_cond) > 0 else Literal(VBool(True))
     user_postcond = reduce(fold_and_str, post_cond) if len(post_cond) >= 2 \
-                   else parse_asserstion(post_cond[0]) \
+                   else parse_assertion(post_cond[0]) \
                         if len(post_cond) > 0 else Literal(VBool(True))
 
     (P, C) = wp(target_language_ast, user_postcond)
@@ -103,7 +103,7 @@ def verify_func(func, inputs, pre_cond, post_cond):
     emit_smt(translator, solver, check_P)
     for c in C:
         emit_smt(translator, solver, c)
-    print('Verified!')
+    print(f'{func.__name__} Verified!')
 
 
 def declare_consts(sigma : dict):
