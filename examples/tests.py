@@ -5,7 +5,7 @@ from veripy import *
 
 
 @verify(
-    [('n', typecheck.types.TINT)], 
+    [('n', types.TINT)], 
     ['n >= 0'], 
     ['x == n'])
 def test_func(n):
@@ -19,8 +19,8 @@ def test_func(n):
     return x
 
 @verify(
-    inputs=[('a', typecheck.types.TINT),
-     ('b', typecheck.types.TINT)],
+    inputs=[('a', types.TINT),
+     ('b', types.TINT)],
     requires=['a >= 0', 'b >= 0'],
     ensures=['ans == a * b']
 )
@@ -36,8 +36,8 @@ def test_func1(a, b):
 
 @verify(
     inputs=[
-        ('a', typecheck.types.TINT),
-        ('b', typecheck.types.TINT)
+        ('a', types.TINT),
+        ('b', types.TINT)
     ],
     requires=[
         'a >= 0',
@@ -69,8 +69,8 @@ def test_func2(a, b):
 
 @verify(
     inputs=[
-        ('a', typecheck.types.TINT),
-        ('b', typecheck.types.TINT)
+        ('a', types.TINT),
+        ('b', types.TINT)
     ],
     requires=[],
     ensures=[
@@ -88,7 +88,7 @@ def Max_Func(a, b):
     inputs=[
         ('a', types.TINT),
         ('b', types.TINT),
-        ('c', types.TINT)
+        ('c', types.TINT),
     ],
     requires=[],
     ensures=[
@@ -125,7 +125,7 @@ def absolute_value(x):
 
 @verify(
     inputs=[
-        ('n', typecheck.types.TINT)
+        ('n', types.TINT)
     ],
     requires=[
         'n >= 0'
