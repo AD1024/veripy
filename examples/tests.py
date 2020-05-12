@@ -72,7 +72,6 @@ def test_func2(a, b):
         ('a', types.TINT),
         ('b', types.TINT)
     ],
-    requires=[],
     ensures=[
         'a < b ==> (ans == b)',
         'b <= a ==> (ans == a)',
@@ -90,7 +89,6 @@ def Max_Func(a, b):
         ('b', types.TINT),
         ('c', types.TINT),
     ],
-    requires=[],
     ensures=[
         'a < b and b < c ==> ans == c',
         'b < a and a < c ==> ans == c',

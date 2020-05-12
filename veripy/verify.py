@@ -116,7 +116,7 @@ def declare_consts(sigma : dict):
         }.get(ty)()
     return consts
 
-def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str], ensures: List[str]):
+def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str]=[], ensures: List[str]=[]):
     def verify_impl(func):
         @wraps(func)
         def caller(*args, **kargs):
