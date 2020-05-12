@@ -86,6 +86,45 @@ def Max_Func(a, b):
 
 @verify(
     inputs=[
+        ('a', types.TINT),
+        ('b', types.TINT),
+        ('c', types.TINT)
+    ],
+    requires=[],
+    ensures=[
+        'a < b and b < c ==> ans == c',
+        'b < a and a < c ==> ans == c',
+        'a < c and c < b ==> ans == b',
+        'c < a and a < b ==> ans == b',
+        'b < c and c < a ==> ans == a',
+        'c < b and b < a ==> ans == a'
+    ]
+)
+def max_of_three(a, b, c):
+    ans = a
+    if ans < b:
+        ans = b
+    if ans < c:
+        ans = c
+    return ans
+
+@verify(
+    inputs=[
+        ('x', types.TINT)
+    ],
+    requires=[],
+    ensures=[
+        'ans >= 0'
+    ]
+)
+def absolute_value(x):
+    ans = x
+    if x < 0:
+        ans = -x
+    return ans
+
+@verify(
+    inputs=[
         ('n', typecheck.types.TINT)
     ],
     requires=[

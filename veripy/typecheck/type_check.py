@@ -44,9 +44,9 @@ def type_infer_expr(sigma: dict, expr: Expr):
         assert sigma is not None and expr.name in sigma
         return sigma[expr.name]
     if isinstance(expr, UnOp):
-        if expr.op == 'not':
+        if expr.op == BoolOps.Not:
             return type_check_expr(sigma, TBOOL, expr.e)
-        if expr.op == '-':
+        if expr.op == ArithOps.Neg:
             return type_check_expr(sigma, TINT, expr.e)
     if isinstance(expr, BinOp):
         if isinstance(expr.op, ArithOps):

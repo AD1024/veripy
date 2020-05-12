@@ -29,9 +29,8 @@ class ExprTranslator:
     
     def visit_BoolOp(self, node):
         op = {
-                ast.And: lambda: BoolOps.And,
-                ast.Or: lambda: BoolOps.Or,
-                ast.Not: lambda: BoolOps.Not
+                ast.And:    lambda: BoolOps.And,
+                ast.Or:     lambda: BoolOps.Or,
              }.get(node.op)
         return self.fold_binops(op, node.values)
     
@@ -46,32 +45,40 @@ class ExprTranslator:
         rv = self.visit(node.comparators[0])
         op = node.ops[0]
         return {
-            ast.Lt: lambda: BinOp(lv, CompOps.Lt, rv),
-            ast.LtE: lambda: BinOp(lv, CompOps.Le, rv),
-            ast.Gt: lambda: BinOp(lv, CompOps.Gt, rv),
-            ast.GtE: lambda: BinOp(lv, CompOps.Ge, rv),
-            ast.Eq: lambda: BinOp(lv, CompOps.Eq, rv),
-            ast.NotEq: lambda: BinOp(lv, CompOps.Neq, rv),
+            ast.Lt:     lambda: BinOp(lv, CompOps.Lt, rv),
+            ast.LtE:    lambda: BinOp(lv, CompOps.Le, rv),
+            ast.Gt:     lambda: BinOp(lv, CompOps.Gt, rv),
+            ast.GtE:    lambda: BinOp(lv, CompOps.Ge, rv),
+            ast.Eq:     lambda: BinOp(lv, CompOps.Eq, rv),
+            ast.NotEq:  lambda: BinOp(lv, CompOps.Neq, rv),
         }.get(type(op), lambda: raise_exception(f'Not Supported: {op}'))()
 
     def visit_BinOp(self, node):
         lv = self.visit(node.left)
         rv = self.visit(node.right)
         return {
-            ast.Add: lambda: BinOp(lv, ArithOps.Add, rv),
-            ast.Sub: lambda: BinOp(lv, ArithOps.Minus, rv),
-            ast.Mult: lambda: BinOp(lv, ArithOps.Mult, rv),
-            ast.Div: lambda: BinOp(lv, ArithOps.IntDiv, rv)
+            ast.Add:    lambda: BinOp(lv, ArithOps.Add, rv),
+            ast.Sub:    lambda: BinOp(lv, ArithOps.Minus, rv),
+            ast.Mult:   lambda: BinOp(lv, ArithOps.Mult, rv),
+            ast.Div:    lambda: BinOp(lv, ArithOps.IntDiv, rv)
         }.get(type(node.op), lambda: raise_exception(f'Not Supported: {node.op}'))()
+    
+    def visit_UnaryOp(self, node):
+        v = self.visit(node.operand)
+        return {
+            ast.USub:   lambda: UnOp(ArithOps.Neg, v),
+            ast.Not:    lambda: UnOp(BoolOps.Not, v)
+        }.get(type(node.op), lambda: raise_exception(f'Not Supported {node.op}'))()
     
     def visit(self, node):
         return {
-                ast.BinOp: lambda: self.visit_BinOp(node),
-                ast.Name: lambda: self.visit_Name(node),
-                ast.Compare: lambda: self.visit_Compare(node),
-                ast.BoolOp: lambda: self.visit_BoolOp(node),
-                ast.NameConstant: lambda: self.visit_NameConstant(node),
-                ast.Num: lambda: self.visit_Num(node)
+                ast.BinOp:          lambda: self.visit_BinOp(node),
+                ast.Name:           lambda: self.visit_Name(node),
+                ast.Compare:        lambda: self.visit_Compare(node),
+                ast.BoolOp:         lambda: self.visit_BoolOp(node),
+                ast.NameConstant:   lambda: self.visit_NameConstant(node),
+                ast.Num:            lambda: self.visit_Num(node),
+                ast.UnaryOp:        lambda: self.visit_UnaryOp(node)
             }.get(type(node), lambda: raise_exception(f'Expr not supported: {node}'))()
 
 class StmtTranslator:
