@@ -1,6 +1,7 @@
 import parser
 import inspect
 import ast
+import veripy
 from veripy import *
 
 
@@ -19,9 +20,14 @@ def test_func(n):
     return x
 
 @verify(
-    inputs=[('a', types.TINT),
-     ('b', types.TINT)],
-    requires=['a >= 0', 'b >= 0'],
+    inputs=[
+        ('a', types.TINT),
+        ('b', types.TINT)
+    ],
+    requires=[
+        'a >= 0',
+        'b >= 0'
+    ],
     ensures=['ans == a * b']
 )
 def test_func1(a, b):

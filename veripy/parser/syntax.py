@@ -84,12 +84,22 @@ class UnOp(Expr):
         return f'(UnOp {self.op} {self.e})'
 
 class Slice(Expr):
-    def __init__(self, lower, upper):
-        self.lower = lower
+    def __init__(self, lower, upper, step):
+        self.lower = lower if lower is not None else Literal(VInt(0))
         self.upper = upper
+        self.step  = step if step is not None else Literal(VInt(1))
     
     def __repr__(self):
-        return f'(Slice {self.lower} -> {self.upper})'
+        return f'(Slice {self.lower} -> {self.upper} (step={self.step}))'
+
+class FunctionCall(Expr):
+    def __init__(self, func_name, args, native=True):
+        self.func_name = func_name
+        self.args = args
+        self.native = native
+    
+    def __repr__(self):
+        return f'(Call {self.func_name} with ({self.args}))'
 
 class Subscript(Expr):
     def __init__(self, var, subscript):
@@ -98,6 +108,18 @@ class Subscript(Expr):
     
     def __repr__(self):
         return f'(Subscript {self.var} {self.subscript})'
+
+class Quantification(Expr):
+    '''
+    Since we are using SMT solver, we convert existential quantification
+    to the negation of a universal quantification.
+    '''
+    def __init__(self, var, expr):
+        self.var = var
+        self.expr = expr
+    
+    def __repr__(self):
+        return f'(∀{self.var}. {self.expr})'
 
 '''
 Translating ASTs

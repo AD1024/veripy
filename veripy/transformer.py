@@ -69,6 +69,25 @@ class ExprTranslator:
             ast.USub:   lambda: UnOp(ArithOps.Neg, v),
             ast.Not:    lambda: UnOp(BoolOps.Not, v)
         }.get(type(node.op), lambda: raise_exception(f'Not Supported {node.op}'))()
+
+    def visit_Index(self, node):
+        return self.visit(node.value)
+    
+    def visit_Slice(self, node):
+        lo, ho, step = [None] * 3
+        if node.lower:
+            lo = self.visit(node.lower)
+        if node.upper:
+            hi = self.visit(node.upper)
+        if node.step:
+            step = self.visit(node.step)
+        
+        return Slice(lo, hi, step)
+
+
+    def visit_Subscript(self, node):
+        v = self.visit(node.value)
+        return Subscript(v, self.visit(node.slice))
     
     def visit(self, node):
         return {
@@ -130,7 +149,7 @@ class StmtTranslator:
                                 and y.value.func.id == 'invariant'
         invars = [self.visit_Call(x.value) for x in filter(is_invariant, node.body)]
         body = self.make_seq(list(filter(lambda x: True if not isinstance(x, ast.Expr) or not isinstance(x.value, ast.Call)
-                                                        else x.value.func.id not in BUILT_INS, node.body)))
+                                                        else x.value.func.id != 'invariant', node.body)))
         return While(invars, cond, body)
     
     def visit_If(self, node):
