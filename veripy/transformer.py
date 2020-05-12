@@ -1,8 +1,8 @@
 import ast
 import z3
-from parser.syntax import *
-from parser import parse_assertion
-from built_ins import BUILT_INS
+from veripy.parser.syntax import *
+from veripy.parser.parser import parse_assertion
+from veripy.built_ins import BUILT_INS
 
 def raise_exception(msg):
     raise Exception(msg)

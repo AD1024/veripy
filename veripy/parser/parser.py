@@ -1,5 +1,5 @@
 import sys
-import parser.syntax as syntax
+from veripy.parser import syntax
 from functools import reduce, wraps
 from pyparsing import *
 

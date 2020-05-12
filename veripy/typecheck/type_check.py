@@ -1,5 +1,5 @@
-from parser.syntax import *
-from typecheck.types import *
+from veripy.parser.syntax import *
+from veripy.typecheck.types import *
 
 def type_check_stmt(sigma, stmt):
     if isinstance(stmt, Skip):

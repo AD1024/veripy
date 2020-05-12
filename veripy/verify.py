@@ -2,12 +2,13 @@ import ast
 import z3
 import inspect
 from typing import List, Tuple, TypeVar
-from parser.syntax import *
-from parser import parse_assertion, parse_expr
+from veripy.parser.syntax import *
+from veripy.parser.parser import parse_assertion, parse_expr
 from functools import wraps
-from transformer import *
+from veripy.transformer import *
 from functools import reduce
-import typecheck as tc
+from veripy import typecheck as tc
+
 
 def invariant(inv):
     return parse_assertion(inv)

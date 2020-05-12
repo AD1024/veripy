@@ -1,4 +1,5 @@
-from parser.syntax import *
+from veripy.parser.syntax import *
+
 
 def print_line(level, content):
     print((' ' * 4) * level, content)
