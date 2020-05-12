@@ -57,7 +57,7 @@ def wp_while(stmt, Q):
                       else reduce(lambda i1, i2: BinOp(i1, BoolOps.And, i2), invars)
     (p, c) = wp(s, combined_invars)
     return (combined_invars, c.union({
-        BinOp(BinOp(combined_invars, BoolOps.And, cond), BoolOps.Implies, cond),
+        BinOp(BinOp(combined_invars, BoolOps.And, cond), BoolOps.Implies, p),
         BinOp(BinOp(combined_invars, BoolOps.And, (UnOp(BoolOps.Not, cond))), BoolOps.Implies, Q)
     }))
 
@@ -71,13 +71,13 @@ def wp(stmt, Q):
         If:     lambda: wp_if(stmt, Q)
     }.get(type(stmt), (None, None))()
 
-def emit_smt(translator: Expr2Z3, solver, constraint : Expr):
+def emit_smt(translator: Expr2Z3, solver, constraint : Expr, fail_msg : str):
     solver.push()
     const = translator.visit(UnOp(BoolOps.Not, constraint))
     solver.add(const)
     if str(solver.check()) == 'sat':
         model = solver.model()
-        raise Exception(f'VerificationViolated on\n{const}\nModel: {model}')
+        raise Exception(f'VerificationViolated on\n{const}\nModel: {model}\n{fail_msg}')
     solver.pop()
 
 def verify_func(func, inputs, pre_cond, post_cond):
@@ -101,9 +101,9 @@ def verify_func(func, inputs, pre_cond, post_cond):
     solver = z3.Solver()
     translator = Expr2Z3(declare_consts(sigma))
 
-    emit_smt(translator, solver, check_P)
+    emit_smt(translator, solver, check_P, 'Precondition does not imply wp')
     for c in C:
-        emit_smt(translator, solver, c)
+        emit_smt(translator, solver, c, 'Side condition violated')
     print(f'{func.__name__} Verified!')
 
 

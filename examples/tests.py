@@ -3,6 +3,7 @@ import inspect
 import ast
 import veripy
 from veripy import *
+from veripy import invariant
 
 
 @verify(
@@ -135,7 +136,7 @@ def absolute_value(x):
         'n >= 0'
     ],
     ensures=[
-        'ans == ((0 + n) * n) // 2'
+        'ans == ((n + 1) * n) // 2'
     ]
 )
 def Summation(n):
@@ -143,10 +144,8 @@ def Summation(n):
     i = 0
     while i <= n:
         invariant('i <= n + 1')
-        invariant('i >= 0')
-        invariant('n >= 0')
-        invariant('ans >= 0')
-        invariant('i > 0 ==> ans == ((0 + (i - 1)) * (i - 1)) // 2')
+        invariant('i >= 0 and n >= 0')
+        invariant('ans == i * (i - 1) // 2')
         ans = ans + i
         i = i + 1
     return ans
