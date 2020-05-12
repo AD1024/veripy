@@ -32,6 +32,7 @@ def test_func1(a, b):
         invariant('ans == (a - n) * b')
         ans = ans + b
         n = n - 1
+    return ans
 
 @verify(
     inputs=[
@@ -64,6 +65,7 @@ def test_func2(a, b):
             ans = ans + 1
             j = j - 1
         i = i - 1
+    return ans
 
 @verify(
     inputs=[
@@ -73,7 +75,7 @@ def test_func2(a, b):
     requires=[],
     ensures=[
         'a < b ==> (ans == b)',
-        'b < a ==> (ans == a)'
+        'b <= a ==> (ans == a)',
     ]
 )
 def Max_Func(a, b):
