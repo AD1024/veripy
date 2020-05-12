@@ -144,7 +144,6 @@ def Summation(n):
     i = 0
     while i <= n:
         invariant('i <= n + 1')
-        invariant('i >= 0 and n >= 0')
         invariant('ans == i * (i - 1) // 2')
         ans = ans + i
         i = i + 1
