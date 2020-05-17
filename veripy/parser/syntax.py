@@ -83,6 +83,14 @@ class UnOp(Expr):
     def __repr__(self):
         return f'(UnOp {self.op} {self.e})'
 
+class Pi(Expr):
+    def __init__(self, e1, e2):
+        self.car = e1
+        self.cdr = e2
+    
+    def __repr__(self):
+        return f'(Pi {self.e1} {self.e2})'
+
 class Slice(Expr):
     def __init__(self, lower, upper, step):
         self.lower = lower if lower is not None else Literal(VInt(0))

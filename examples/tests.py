@@ -5,6 +5,10 @@ import veripy
 from veripy import *
 from veripy import invariant
 
+veripy.enable_verification()
+veripy.scope('test')
+
+veripy.scope('loops')
 
 @verify(
     [('n', types.TINT)], 
@@ -74,6 +78,8 @@ def test_func2(a, b):
         i = i - 1
     return ans
 
+veripy.scope('if-then-else')
+
 @verify(
     inputs=[
         ('a', types.TINT),
@@ -128,6 +134,8 @@ def absolute_value(x):
         ans = -x
     return ans
 
+veripy.scope('summation')
+
 @verify(
     inputs=[
         ('n', types.TINT)
@@ -148,3 +156,6 @@ def Summation(n):
         ans = ans + i
         i = i + 1
     return ans
+
+veripy.do_verification('loops')
+veripy.verify_all()

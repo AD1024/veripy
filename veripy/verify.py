@@ -9,6 +9,72 @@ from veripy.transformer import *
 from functools import reduce
 from veripy import typecheck as tc
 
+class VerificationStore:
+    def __init__(self):
+        self.store = dict()
+        self.scope = []
+        self.switch = False
+    
+    def enable_verification(self):
+        self.switch = True
+
+    def push(self, scope):
+        assert scope not in self.store
+        self.scope.append(scope)
+        self.store[scope] = {
+            'func_attrs' : dict(),
+            'vf'         : []
+        }
+    
+    def current_scope(self):
+        if self.scope:
+            return self.scope[-1]
+    
+    def push_verification(self, verification_func):
+        if self.switch:
+            if not self.scope:
+                raise Exception('No Scope Defined')
+            self.store[self.scope[-1]]['vf'].append(verification_func)
+    
+    def verify(self, scope):
+        if self.switch and self.store:
+            print(f'=> Verifying Scope `{scope}`')
+            verifications = self.store[scope]
+            for f in verifications['vf']:
+                f()
+            print(f'=> End Of `{scope}`\n')
+    
+    def verify_all(self):
+        if self.switch:
+            while self.scope:
+                self.verify(self.scope.pop())
+    
+    def insert_func_attr(self, scope, fname, inputs=[], requires=[], ensures=[]):
+        if self.switch and self.store:
+            self.store[scope]['func_attrs'][fname] = {
+                'inputs' : dict(inputs),
+                'ensures': fold_constraints(ensures),
+                'requires': fold_constraints(requires)
+            }
+    
+    def get_func_attr(self, fname):
+        if self.store:
+            return self.store[-1].get('func_attrs', dict()).get(fname)
+        return None
+
+STORE = VerificationStore()
+
+def enable_verification():
+    STORE.enable_verification()
+
+def scope(name : str):
+    STORE.push(name)
+
+def do_verification(name : str):
+    STORE.verify(name)
+
+def verify_all():
+    STORE.verify_all()
 
 def invariant(inv):
     return parse_assertion(inv)
@@ -80,20 +146,22 @@ def emit_smt(translator: Expr2Z3, solver, constraint : Expr, fail_msg : str):
         raise Exception(f'VerificationViolated on\n{const}\nModel: {model}\n{fail_msg}')
     solver.pop()
 
-def verify_func(func, inputs, pre_cond, post_cond):
+def fold_constraints(constraints : List[str]):
+    fold_and_str = lambda x, y: BinOp(parse_assertion(x) if isinstance(x, str) else x,
+                                BoolOps.And, parse_assertion(y) if isinstance(y, str) else y)
+    
+    return reduce(fold_and_str, constraints) if len(constraints) >= 2 \
+                   else parse_assertion(constraints[0]) \
+                        if len(constraints) > 0 else Literal(VBool(True))
+
+def verify_func(func, inputs, ensures, requires):
     code = inspect.getsource(func)
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
     sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
-    fold_and_str = lambda x, y: BinOp(parse_assertion(x) if isinstance(x, str) else x,
-                                BoolOps.And, parse_assertion(y) if isinstance(y, str) else y)
 
-    user_precond = reduce(fold_and_str, pre_cond) if len(pre_cond) >= 2 \
-                   else parse_assertion(pre_cond[0]) \
-                        if len(pre_cond) > 0 else Literal(VBool(True))
-    user_postcond = reduce(fold_and_str, post_cond) if len(post_cond) >= 2 \
-                   else parse_assertion(post_cond[0]) \
-                        if len(post_cond) > 0 else Literal(VBool(True))
+    user_precond = fold_constraints(ensures)
+    user_postcond = fold_constraints(requires)
 
     (P, C) = wp(target_language_ast, user_postcond)
     check_P = BinOp(user_precond, BoolOps.Implies, P)
@@ -120,7 +188,8 @@ def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str]=[],
     def verify_impl(func):
         @wraps(func)
         def caller(*args, **kargs):
-            return func(args, kargs)
-        result = verify_func(func, inputs, requires, ensures)
+            return func(*args, **kargs)
+        STORE.insert_func_attr(STORE.current_scope(), func.__name__, inputs, requires, ensures)
+        STORE.push_verification(lambda: verify_func(func, inputs, requires, ensures))
         return caller
     return verify_impl
