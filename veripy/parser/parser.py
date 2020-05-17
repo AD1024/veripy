@@ -20,7 +20,7 @@ VAR.setParseAction(ProcessVar)
 
 NEG = Literal('-')
 ADD, MINUS = map(Literal, ('+', '-'))
-MULT, DIV = map(Literal, ('*', '//'))
+MULT, DIV, MOD = map(Literal, ('*', '//', '%'))
 
 AND, OR, NOT, IMPLIES, IFF = map(Literal, ('and', 'or', 'not', '==>', '<==>'))
 
@@ -48,6 +48,7 @@ def lazy(func):
 def arith_expr_rules():
     return [
             (NEG, 1, opAssoc.RIGHT, ProcessUnOp),
+            (MOD, 2, opAssoc.LEFT, ProcessBinOp),
             (MULT, 2, opAssoc.LEFT, ProcessBinOp),
             (DIV, 2, opAssoc.LEFT, ProcessBinOp),
             (ADD, 2, opAssoc.LEFT, ProcessBinOp),

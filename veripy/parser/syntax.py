@@ -8,6 +8,7 @@ class ArithOps(Op, Enum):
     Mult = '*'
     IntDiv = '/'
     Neg = '-'
+    Mod = '%'
 
 class CompOps(Op, Enum):
     Eq = '='

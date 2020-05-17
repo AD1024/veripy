@@ -133,4 +133,15 @@ def Summation(n : int) -> int:
         i = i + 1
     return ans
 
+veripy.scope('mod')
+
+@verify(
+    requires=['n >= 0'],
+    ensures=['ans == True']
+)
+def test_mod(n) -> bool:
+    m = (n * 2) % 2
+    ans = (m == 0)
+    return ans
+
 veripy.verify_all()

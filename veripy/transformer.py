@@ -60,7 +60,8 @@ class ExprTranslator:
             ast.Add:    lambda: BinOp(lv, ArithOps.Add, rv),
             ast.Sub:    lambda: BinOp(lv, ArithOps.Minus, rv),
             ast.Mult:   lambda: BinOp(lv, ArithOps.Mult, rv),
-            ast.Div:    lambda: BinOp(lv, ArithOps.IntDiv, rv)
+            ast.Div:    lambda: BinOp(lv, ArithOps.IntDiv, rv),
+            ast.Mod:    lambda: BinOp(lv, ArithOps.Mod, rv)
         }.get(type(node.op), lambda: raise_exception(f'Not Supported: {node.op}'))()
     
     def visit_UnaryOp(self, node):
@@ -196,6 +197,7 @@ class Expr2Z3:
             ArithOps.Minus:     lambda: c1 - c2,
             ArithOps.Mult:      lambda: c1 * c2,
             ArithOps.IntDiv:    lambda: c1 / c2,
+            ArithOps.Mod:       lambda: c1 % c2,
             
             BoolOps.And:        lambda: z3.And(c1, c2),
             BoolOps.Or:         lambda: z3.Or(c1, c2),
