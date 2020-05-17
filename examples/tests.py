@@ -144,4 +144,34 @@ def test_mod(n) -> bool:
     ans = (m == 0)
     return ans
 
+veripy.scope('quantifiers')
+@verify(
+    ensures=['forall x : int :: x > 0 ==> n + x > n']
+)
+def test_quantifier(n : int) -> int:
+    return n
+
+@verify(
+    ensures=['forall x :: forall y :: x + y == y + x']
+)
+def plus_comm() -> None:
+    pass
+
+@verify(
+    ensures=[
+        'forall x :: forall y :: (x % 2 == 0) and (y % 2 == 1) ==> (x + y) % 2 == 1',
+        'forall x :: exists y :: y > x and x - y < 0'
+    ]
+)
+def some_properties() -> None:
+    pass
+
+@verify(
+    ensures=[
+        'forall x :: forall y :: not (x and y) <==> (not x) or (not y)'
+    ]
+)
+def de_morgan() -> None:
+    pass
+
 veripy.verify_all()

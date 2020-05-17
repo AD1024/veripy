@@ -94,7 +94,8 @@ subscript_expr = VAR + OneOrMore(
             + Literal(']'))
         )
 
-quantification = (Literal('forall') ^ Literal('exists')) + VAR + Suppress('::') + assertion_expr
+quantification = (Literal('forall') ^ Literal('exists')) + VAR \
+                + (Optional(Suppress(':') + VAR)) + Suppress('::') + assertion_expr
 quantification.setParseAction(ProcessQuantification)
 
 atom =  built_in_call    \

@@ -3,9 +3,25 @@ import z3
 from veripy.parser.syntax import *
 from veripy.parser.parser import parse_assertion
 from veripy.built_ins import BUILT_INS
+from veripy.typecheck.types import *
 
 def raise_exception(msg):
     raise Exception(msg)
+
+def subst(this, withThis, inThis):
+    if isinstance(inThis, Var):
+        if inThis.name == this:
+            return withThis
+        else:
+            return inThis
+    if isinstance(inThis, BinOp):
+        return BinOp(subst(this, withThis, inThis.e1), inThis.op, subst(this, withThis, inThis.e2))
+    if isinstance(inThis, Literal):
+        return inThis
+    if isinstance(inThis, UnOp):
+        return UnOp(inThis.op, subst(this, withThis, inThis.e))
+    if isinstance(inThis, Quantification):
+        return Quantification(inThis.var, subst(this, withThis, inThis.expr), inThis.ty)
 
 class ExprTranslator:
 
@@ -171,6 +187,7 @@ class StmtTranslator:
                 ast.Assert:      lambda: self.visit_Assert(node),
                 ast.Assign:      lambda: self.visit_Assign(node),
                 ast.Return:      lambda: self.visit_Return(node),
+                ast.Pass:        lambda: Skip()
             }.get(type(node), lambda: raise_exception(f'Stmt not supported: {node}'))()
 
 
@@ -178,6 +195,14 @@ class Expr2Z3:
 
     def __init__(self, name_dict: dict):
         self.name_dict = name_dict
+
+    def translate_type(self, ty):
+        if ty == TINT:
+            return z3.IntSort()
+        if ty == TBOOL:
+            return z3.BoolSort()
+        if isinstance(ty, TARR):
+            return z3.ArraySort(z3.IntSort(), self.translate_type(ty.ty))
 
     def visit_Literal(self, lit):
         v = lit.value
@@ -218,11 +243,26 @@ class Expr2Z3:
             ArithOps.Neg: lambda: -c,
             BoolOps.Not:  lambda: z3.Not(c)
         }.get(node.op, lambda: raise_exception(f'Unsupported Operator: {node.op}'))()
+    
+    def visit_Quantification(self, node : Quantification):
+        bound_var = None
+        if node.ty == TINT:
+            bound_var = z3.Int(node.var.name)
+        elif node.ty == TBOOL:
+            bound_var = z3.Bool(node.var.name)
+        elif isinstance(node.ty, TARR):
+            bound_var = z3.Array(z3.IntSort(), self.translate_type(node.ty.ty))
+        if bound_var is not None:
+            self.name_dict[node.var.name] = bound_var
+            return z3.ForAll(bound_var, self.visit(node.expr))
+        else:
+            raise Exception(f'Unsupported quantified type: {node.ty}')
 
     def visit(self, expr):
         return {
-            Literal: lambda: self.visit_Literal(expr),
-            Var:     lambda: self.visit_Var(expr),
-            BinOp:   lambda: self.visit_BinOp(expr),
-            UnOp:    lambda: self.visit_UnOp(expr)
+            Literal:            lambda: self.visit_Literal(expr),
+            Var:                lambda: self.visit_Var(expr),
+            BinOp:              lambda: self.visit_BinOp(expr),
+            UnOp:               lambda: self.visit_UnOp(expr),
+            Quantification:     lambda: self.visit_Quantification(expr)
         }.get(type(expr), lambda: raise_exception(f'Unsupported AST: {expr}'))()

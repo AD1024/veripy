@@ -65,8 +65,8 @@ class VerificationStore:
         if self.switch and self.store:
             self.store[scope]['func_attrs'][fname] = {
                 'inputs' : inputs_map,
-                'ensures': fold_constraints(ensures),
-                'requires': fold_constraints(requires),
+                'ensures': ensures,
+                'requires': requires,
                 'returns' : returns,
                 'func_type' : tc.types.TARROW(tc.types.TPROD(lambda i: i[1], inputs), returns)
             }
@@ -104,19 +104,6 @@ def invariant(inv):
 def assume(C):
     if not C:
         raise RuntimeError('Assumption Violation')
-
-def subst(this, withThis, inThis):
-    if isinstance(inThis, Var):
-        if inThis.name == this:
-            return withThis
-        else:
-            return inThis
-    if isinstance(inThis, BinOp):
-        return BinOp(subst(this, withThis, inThis.e1), inThis.op, subst(this, withThis, inThis.e2))
-    if isinstance(inThis, Literal):
-        return inThis
-    if isinstance(inThis, UnOp):
-        return UnOp(inThis.op, subst(this, withThis, inThis.e))
 
 def wp_seq(stmt, Q):
     (p2, c2) = wp(stmt.s2, Q)
@@ -171,10 +158,12 @@ def emit_smt(translator: Expr2Z3, solver, constraint : Expr, fail_msg : str):
 def fold_constraints(constraints : List[str]):
     fold_and_str = lambda x, y: BinOp(parse_assertion(x) if isinstance(x, str) else x,
                                 BoolOps.And, parse_assertion(y) if isinstance(y, str) else y)
-    
-    return reduce(fold_and_str, constraints) if len(constraints) >= 2 \
-                   else parse_assertion(constraints[0]) \
-                        if len(constraints) > 0 else Literal(VBool(True))
+    if len(constraints) >= 2:
+        return reduce(fold_and_str, constraints)
+    elif len(constraints) == 1:
+        return parse_assertion(constraints[0])
+    else:
+        return Literal(VBool(True))
 
 def verify_func(func, scope, inputs, ensures, requires):
     code = inspect.getsource(func)
@@ -185,6 +174,9 @@ def verify_func(func, scope, inputs, ensures, requires):
 
     user_precond = fold_constraints(ensures)
     user_postcond = fold_constraints(requires)
+
+    tc.type_check_expr(sigma, func_attrs, TBOOL, user_precond)
+    tc.type_check_expr(sigma, func_attrs, TBOOL, user_postcond)
 
     (P, C) = wp(target_language_ast, user_postcond)
     check_P = BinOp(user_precond, BoolOps.Implies, P)

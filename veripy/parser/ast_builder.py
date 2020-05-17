@@ -1,4 +1,5 @@
 from veripy.parser import syntax
+from veripy.typecheck.types import to_ast_type
 
 ArithOps = syntax.ArithOps
 CompOps = syntax.CompOps
@@ -9,6 +10,7 @@ BINOP_DICT = {
     '-' : ArithOps.Minus,
     '*' : ArithOps.Mult,
     '//': ArithOps.IntDiv,
+    '%' : ArithOps.Mod,
 
     '<=' : CompOps.Le,
     '<'  : CompOps.Lt,
@@ -57,9 +59,9 @@ class ProcessUnOp(ASTBuilder):
     
     def makeAST(self):
         e = self.value.makeAST()
-        {
-            'not' : lambda: syntax.BinOp(BoolOps.Not, e),
-            '-'   : lambda: syntax.BinOp(ArithOps.Neg, e)
+        return {
+            'not' : lambda: syntax.UnOp(BoolOps.Not, e),
+            '-'   : lambda: syntax.UnOp(ArithOps.Neg, e)
         }.get(self.op, lambda: None)()
 
 class ProcessBinOp(ASTBuilder):
@@ -119,11 +121,23 @@ class ProcessQuantification(ASTBuilder):
         self.value = tokens
     
     def makeAST(self):
-        quantifier, var, expr = self.value
+        import veripy.transformer as trans
+        ty = None
+        if len(self.value) == 3:
+            quantifier, var, expr = self.value
+        elif len(self.value) == 4:
+            quantifier, var, ty, expr = self.value
+        if ty is not None:
+            ty = ty.makeAST()
+            ty = to_ast_type(ty.name)
+
+        ori = var.makeAST()
+        bounded = syntax.Var(ori.name + '$$0')
+        e = trans.subst(ori.name, bounded, expr.makeAST())
         if quantifier == 'exists':
             # exists x. Q <==> not forall x. not Q
             return syntax.UnOp(BoolOps.Not,
-                        syntax.Quantification(var.makeAST(),
-                                                syntax.UnOp(BoolOps.Not, expr.makeAST())))
+                        syntax.Quantification(bounded,
+                                                syntax.UnOp(BoolOps.Not, e), ty=ty))
         else:
-            return syntax.Quantification(var.makeAST(), expr.makeAST())
+            return syntax.Quantification(bounded, e, ty=ty)

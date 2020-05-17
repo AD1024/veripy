@@ -82,11 +82,21 @@ def type_infer_Slice(sigma, func_sigma, expr):
 def type_infer_FunctionCall(sigma, func_sigma, expr):
     pass
 
+def type_infer_quantification(sigma, func_sigma, expr):
+    sigma[expr.var.name] = TANY if expr.ty is None else expr.ty
+    type_check_expr(sigma, func_sigma, TBOOL, expr.expr)
+    if sigma[expr.var.name] == TANY:
+        raise Exception(f'Cannot infer type for {expr.var} in {expr}')
+    expr.ty = sigma[expr.var.name]
+    sigma.pop(expr.var.name)
+    return TBOOL
+
 def type_infer_expr(sigma: dict, func_sigma : dict, expr: Expr):
     if isinstance(expr, Literal):
         return type_infer_literal(sigma, func_sigma, expr)
     if isinstance(expr, Var):
-        assert sigma is not None and expr.name in sigma
+        assert sigma is not None
+        assert expr.name in sigma
         return sigma[expr.name]
     if isinstance(expr, UnOp):
         return type_infer_UnOp(sigma, func_sigma, expr)
@@ -94,5 +104,7 @@ def type_infer_expr(sigma: dict, func_sigma : dict, expr: Expr):
         return type_infer_BinOp(sigma, func_sigma, expr)
     if isinstance(expr, Slice):
         return type_infer_Slice(sigma, func_sigma, expr)
+    if isinstance(expr, Quantification):
+        return type_infer_quantification(sigma, func_sigma, expr)
 
     raise NotImplementedError(f'Unknown expression: {expr}')

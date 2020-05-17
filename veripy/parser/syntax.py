@@ -123,12 +123,13 @@ class Quantification(Expr):
     Since we are using SMT solver, we convert existential quantification
     to the negation of a universal quantification.
     '''
-    def __init__(self, var, expr):
+    def __init__(self, var, expr, ty=None):
         self.var = var
+        self.ty = ty
         self.expr = expr
     
     def __repr__(self):
-        return f'(∀{self.var}. {self.expr})'
+        return f'(∀{self.var} : {self.ty}. {self.expr})'
 
 '''
 Translating ASTs

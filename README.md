@@ -13,7 +13,7 @@ Work-In-Progress
 # TODOs
 - [x] Basic Verification with control flows
 - [ ] Arrays
-- [ ] Quantifiers
+- [x] Quantifiers
 - [ ] `Havoc` for `while`
 - [ ] Function calls
 - [ ] More AST mappings
