@@ -36,18 +36,30 @@ class VerificationStore:
                 raise Exception('No Scope Defined')
             self.store[self.scope[-1]]['vf'].append(verification_func)
     
-    def verify(self, scope):
+    def verify(self, scope, ignore_err):
         if self.switch and self.store:
             print(f'=> Verifying Scope `{scope}`')
             verifications = self.store[scope]
             for f in verifications['vf']:
-                f()
+                try:
+                    f()
+                except Exception as e:
+                    if not ignore_err:
+                        raise e
+                    else:
+                        print(e)
             print(f'=> End Of `{scope}`\n')
     
-    def verify_all(self):
+    def verify_all(self, ignore_err):
         if self.switch:
-            while self.scope:
-                self.verify(self.scope.pop())
+            try:
+                while self.scope:
+                    self.verify(self.scope.pop(), ignore_err)
+            except Exception as e:
+                if not ignore_err:
+                    raise e
+                else:
+                    print(e)           
     
     def insert_func_attr(self, scope, fname, inputs=[], inputs_map={}, returns=tc.types.TANY, requires=[], ensures=[]):
         if self.switch and self.store:
@@ -80,11 +92,11 @@ def enable_verification():
 def scope(name : str):
     STORE.push(name)
 
-def do_verification(name : str):
-    STORE.verify(name)
+def do_verification(name : str, ignore_err : bool=True):
+    STORE.verify(name, ignore_err)
 
-def verify_all():
-    STORE.verify_all()
+def verify_all(ignore_err : bool=True):
+    STORE.verify_all(ignore_err)
 
 def invariant(inv):
     return parse_assertion(inv)
@@ -180,9 +192,9 @@ def verify_func(func, scope, inputs, ensures, requires):
     solver = z3.Solver()
     translator = Expr2Z3(declare_consts(sigma))
 
-    emit_smt(translator, solver, check_P, 'Precondition does not imply wp')
+    emit_smt(translator, solver, check_P, f'Precondition does not imply wp at {func.__name__}')
     for c in C:
-        emit_smt(translator, solver, c, 'Side condition violated')
+        emit_smt(translator, solver, c, f'Side condition violated at {func.__name__}')
     print(f'{func.__name__} Verified!')
 
 

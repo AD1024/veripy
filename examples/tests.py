@@ -133,5 +133,4 @@ def Summation(n : int) -> int:
         i = i + 1
     return ans
 
-veripy.do_verification('loops')
 veripy.verify_all()
