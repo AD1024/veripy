@@ -11,10 +11,9 @@ veripy.scope('test')
 veripy.scope('loops')
 
 @verify(
-    [('n', types.TINT)], 
-    ['n >= 0'], 
-    ['x == n'])
-def test_func(n):
+    requires=['n >= 0'], 
+    ensures=['x == n'])
+def test_func(n) -> int:
     y = n
     x = 0
     while y > 0:
@@ -25,17 +24,13 @@ def test_func(n):
     return x
 
 @verify(
-    inputs=[
-        ('a', types.TINT),
-        ('b', types.TINT)
-    ],
     requires=[
         'a >= 0',
         'b >= 0'
     ],
     ensures=['ans == a * b']
 )
-def test_func1(a, b):
+def test_func1(a : int, b : int) -> int:
     ans = 0
     n = a
     while n > 0:
@@ -46,10 +41,6 @@ def test_func1(a, b):
     return ans
 
 @verify(
-    inputs=[
-        ('a', types.TINT),
-        ('b', types.TINT)
-    ],
     requires=[
         'a >= 0',
         'b >= 0'
@@ -58,7 +49,7 @@ def test_func1(a, b):
         'ans == a * b'
     ]
 )
-def test_func2(a, b):
+def test_func2(a : int, b : int) -> int:
     ans = 0
     i = a
     while i > 0:
@@ -81,27 +72,18 @@ def test_func2(a, b):
 veripy.scope('if-then-else')
 
 @verify(
-    inputs=[
-        ('a', types.TINT),
-        ('b', types.TINT)
-    ],
     ensures=[
         'a < b ==> (ans == b)',
         'b <= a ==> (ans == a)',
     ]
 )
-def Max_Func(a, b):
+def Max_Func(a : int, b : int) -> int:
     ans = a
     if a < b:
         ans = b
     return ans
 
 @verify(
-    inputs=[
-        ('a', types.TINT),
-        ('b', types.TINT),
-        ('c', types.TINT),
-    ],
     ensures=[
         'a < b and b < c ==> ans == c',
         'b < a and a < c ==> ans == c',
@@ -111,7 +93,7 @@ def Max_Func(a, b):
         'c < b and b < a ==> ans == a'
     ]
 )
-def max_of_three(a, b, c):
+def max_of_three(a : int, b : int, c : int) -> int:
     ans = a
     if ans < b:
         ans = b
@@ -120,15 +102,12 @@ def max_of_three(a, b, c):
     return ans
 
 @verify(
-    inputs=[
-        ('x', types.TINT)
-    ],
     requires=[],
     ensures=[
         'ans >= 0'
     ]
 )
-def absolute_value(x):
+def absolute_value(x : int) -> int:
     ans = x
     if x < 0:
         ans = -x
@@ -137,9 +116,6 @@ def absolute_value(x):
 veripy.scope('summation')
 
 @verify(
-    inputs=[
-        ('n', types.TINT)
-    ],
     requires=[
         'n >= 0'
     ],
@@ -147,7 +123,7 @@ veripy.scope('summation')
         'ans == ((n + 1) * n) // 2'
     ]
 )
-def Summation(n):
+def Summation(n : int) -> int:
     ans = 0
     i = 0
     while i <= n:

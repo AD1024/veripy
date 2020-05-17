@@ -49,18 +49,28 @@ class VerificationStore:
             while self.scope:
                 self.verify(self.scope.pop())
     
-    def insert_func_attr(self, scope, fname, inputs=[], requires=[], ensures=[]):
+    def insert_func_attr(self, scope, fname, inputs=[], inputs_map={}, returns=tc.types.TANY, requires=[], ensures=[]):
         if self.switch and self.store:
             self.store[scope]['func_attrs'][fname] = {
-                'inputs' : dict(inputs),
+                'inputs' : inputs_map,
                 'ensures': fold_constraints(ensures),
-                'requires': fold_constraints(requires)
+                'requires': fold_constraints(requires),
+                'returns' : returns,
+                'func_type' : tc.types.TARROW(tc.types.TPROD(lambda i: i[1], inputs), returns)
             }
     
     def get_func_attr(self, fname):
         if self.store:
             return self.store[-1].get('func_attrs', dict()).get(fname)
         return None
+
+    def current_func_attrs(self):
+        if self.scope:
+            return self.store[self.scope[-1]]['func_attrs']
+    
+    def get_func_attrs(self, scope, fname):
+        if self.scope:
+            return self.store[scope]['func_attrs'][fname]
 
 STORE = VerificationStore()
 
@@ -154,11 +164,12 @@ def fold_constraints(constraints : List[str]):
                    else parse_assertion(constraints[0]) \
                         if len(constraints) > 0 else Literal(VBool(True))
 
-def verify_func(func, inputs, ensures, requires):
+def verify_func(func, scope, inputs, ensures, requires):
     code = inspect.getsource(func)
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
-    sigma = tc.type_check_stmt(dict(inputs), target_language_ast)
+    func_attrs = STORE.get_func_attrs(scope, func.__name__)
+    sigma = tc.type_check_stmt(func_attrs['inputs'], func_attrs, target_language_ast)
 
     user_precond = fold_constraints(ensures)
     user_postcond = fold_constraints(requires)
@@ -178,18 +189,40 @@ def verify_func(func, inputs, ensures, requires):
 def declare_consts(sigma : dict):
     consts = dict()
     for (name, ty) in sigma.items():
-        consts[name] = {
-            tc.types.TINT: lambda:  z3.Int(name),
-            tc.types.TBOOL: lambda: z3.Bool(name)
-        }.get(ty)()
+        if type(ty) != dict:
+            consts[name] = {
+                tc.types.TINT: lambda:  z3.Int(name),
+                tc.types.TBOOL: lambda: z3.Bool(name)
+            }.get(ty)()
     return consts
 
-def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]], requires: List[str]=[], ensures: List[str]=[]):
+def parse_func_types(func, inputs=[]):
+    code = inspect.getsource(func)
+    func_ast = ast.parse(code)
+    func_def = func_ast.body[0]
+    result = []
+    provided = dict(inputs)
+    for i in func_def.args.args:
+        if i.annotation:
+            result.append(tc.types.to_ast_type(i.annotation))
+        else:
+            result.append(provided.get(i.arg, tc.types.TANY))
+        provided[i.arg] = result[-1]
+
+    if func_def.returns:
+        ret_type = tc.types.to_ast_type(func_def.returns)
+        return (result, provided, ret_type)
+    else:
+        raise Exception('Return annotation is required for verifying functions')
+
+def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]]=[], requires: List[str]=[], ensures: List[str]=[]):
     def verify_impl(func):
         @wraps(func)
         def caller(*args, **kargs):
             return func(*args, **kargs)
-        STORE.insert_func_attr(STORE.current_scope(), func.__name__, inputs, requires, ensures)
-        STORE.push_verification(lambda: verify_func(func, inputs, requires, ensures))
+        types = parse_func_types(func, inputs=inputs)
+        scope = STORE.current_scope()
+        STORE.insert_func_attr(scope, func.__name__, types[0], types[1], types[2], requires, ensures)
+        STORE.push_verification(lambda: verify_func(func, scope, inputs, requires, ensures))
         return caller
     return verify_impl
