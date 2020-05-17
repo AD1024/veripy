@@ -108,10 +108,7 @@ subscript_expr.setParseAction(ProcessSubscript)
 
 arith_expr <<= (infixNotation(atom, arith_expr_rules()))
 
-arith_comp = infixNotation(
-                arith_expr 
-                | subscript_expr
-                | built_in_call, arith_comp_rules())
+arith_comp = infixNotation(arith_expr, arith_comp_rules())
 
 bool_expr <<= infixNotation(
                 quantification

@@ -22,6 +22,10 @@ def subst(this, withThis, inThis):
         return UnOp(inThis.op, subst(this, withThis, inThis.e))
     if isinstance(inThis, Quantification):
         return Quantification(inThis.var, subst(this, withThis, inThis.expr), inThis.ty)
+    if isinstance(inThis, FunctionCall):
+        return inThis
+    
+    raise NotImplementedError(f'Substitution not implemented for {type(inThis)}')
 
 class ExprTranslator:
 

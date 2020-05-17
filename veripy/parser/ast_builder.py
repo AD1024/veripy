@@ -21,9 +21,13 @@ BINOP_DICT = {
 
     'and' : BoolOps.And,
     'or'  : BoolOps.Or,
-    'not' : BoolOps.Not,
     '==>' : BoolOps.Implies,
     '<==>': BoolOps.Iff
+}
+
+UNOP_DICT = {
+    'not' : BoolOps.Not,
+    '-'   : ArithOps.Neg
 }
 
 def unpackTokens(tokenlist):
@@ -59,10 +63,7 @@ class ProcessUnOp(ASTBuilder):
     
     def makeAST(self):
         e = self.value.makeAST()
-        return {
-            'not' : lambda: syntax.UnOp(BoolOps.Not, e),
-            '-'   : lambda: syntax.UnOp(ArithOps.Neg, e)
-        }.get(self.op, lambda: None)()
+        return syntax.UnOp(UNOP_DICT[self.op], e)
 
 class ProcessBinOp(ASTBuilder):
     def makeAST(self):
@@ -114,7 +115,10 @@ class ProcessFnCall(ASTBuilder):
 
     def makeAST(self):
         func_name, *args = self.value
-        return syntax.FunctionCall(func_name.makeAST(), [x.makeAST() for x in args], native=False)
+        func_name = func_name.makeAST()
+        if func_name.name in UNOP_DICT:
+            return syntax.UnOp(UNOP_DICT[func_name.name], args[0].makeAST())
+        return syntax.FunctionCall(func_name, [x.makeAST() for x in args], native=False)
 
 class ProcessQuantification(ASTBuilder):
     def __init__(self, tokens):

@@ -174,4 +174,14 @@ def some_properties() -> None:
 def de_morgan() -> None:
     pass
 
+@verify(
+    ensures=[
+        'forall x :: (not (not x)) <==> x',
+        'forall x :: x or (not x) <==> True',
+        'forall x :: forall y :: (x ==> y) ==> (y ==> x) ==> (x <==> y)'
+    ]
+)
+def make_intuitionists_mad() -> None:
+    pass
+
 veripy.verify_all()
