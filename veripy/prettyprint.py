@@ -46,6 +46,9 @@ def pretty_print_assign(level, ast):
 def pretty_print_skip(level, ast):
     print_line(level, 'Skip()')
 
+def pretty_print_havoc(level, ast):
+    print_line(level, f'Havoc({ast.var})')
+
 def pretty_print_impl(level, ast):
     {
         Seq: lambda: pretty_print_seq(level, ast),
@@ -54,7 +57,8 @@ def pretty_print_impl(level, ast):
         Assign: lambda: pretty_print_assign(level, ast),
         Assert: lambda: pretty_print_assert(level, ast),
         Assume: lambda: pretty_print_assume(level, ast),
-        Skip:   lambda: pretty_print_skip(level, ast)
+        Skip:   lambda: pretty_print_skip(level, ast),
+        Havoc:  lambda: pretty_print_havoc(level, ast)
     }.get(type(ast), lambda: None)()
 
 def pretty_print(ast):

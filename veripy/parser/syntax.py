@@ -59,6 +59,9 @@ class Var(Expr):
     
     def __repr__(self):
         return f'Var {self.name}'
+    
+    def variables(self):
+        return {self.name}
 
 class Literal(Expr):
     def __init__(self, v : Value):
@@ -66,6 +69,9 @@ class Literal(Expr):
     
     def __repr__(self):
         return f'(Literal {self.value})'
+    
+    def variables(self):
+        return set()
 
 class BinOp(Expr):
     def __init__(self, l : Expr, op : Op, r : Expr):
@@ -75,6 +81,9 @@ class BinOp(Expr):
     
     def __repr__(self):
         return f'(BinOp {self.e1} {self.op} {self.e2})'
+    
+    def variables(self):
+        return {*self.e1.variables(), *self.e2.variables()}
 
 class UnOp(Expr):
     def __init__(self, op : Op, expr : Expr):
@@ -83,6 +92,9 @@ class UnOp(Expr):
     
     def __repr__(self):
         return f'(UnOp {self.op} {self.e})'
+    
+    def variables(self):
+        return {*self.e.variables()}
 
 class Pi(Expr):
     def __init__(self, e1, e2):
@@ -91,6 +103,9 @@ class Pi(Expr):
     
     def __repr__(self):
         return f'(Pi {self.e1} {self.e2})'
+    
+    def variables(self):
+        return {*self.e1.variables, *self.e2.variables}
 
 class Slice(Expr):
     def __init__(self, lower, upper, step):
@@ -109,6 +124,9 @@ class FunctionCall(Expr):
     
     def __repr__(self):
         return f'(Call {self.func_name} with ({self.args}))'
+    
+    def variables(self):
+        return set()
 
 class Subscript(Expr):
     def __init__(self, var, subscript):
@@ -117,6 +135,9 @@ class Subscript(Expr):
     
     def __repr__(self):
         return f'(Subscript {self.var} {self.subscript})'
+    
+    def variables(self):
+        return {self.var.name}
 
 class Quantification(Expr):
     '''
@@ -139,6 +160,9 @@ class Stmt: pass
 class Skip(Stmt):
     def __repr__(self):
         return f'(Skip)'
+    
+    def variables(self):
+        return set()
 
 class Assign(Stmt):
     def __init__(self, var, expr):
@@ -147,6 +171,9 @@ class Assign(Stmt):
     
     def __repr__(self):
         return f'(Assign {self.var} {self.expr})'
+    
+    def variables(self):
+        return {self.var, *self.expr.variables()}
 
 class If(Stmt):
     def __init__(self, cond_expr : Expr, lb_stmt : Stmt, rb_stmt : Stmt):
@@ -156,6 +183,9 @@ class If(Stmt):
     
     def __repr__(self):
         return f'(If {self.cond} {self.lb} {self.rb})'
+    
+    def variables(self):
+        return {*self.cond.variables(), *self.lb.variables(), *self.rb.variables()}
 
 class Seq(Stmt):
     def __init__(self, s1 : Stmt, s2 : Stmt):
@@ -164,6 +194,9 @@ class Seq(Stmt):
     
     def __repr__(self):
         return f'(Seq {self.s1} {self.s2})'
+    
+    def variables(self):
+        return {*self.s1.variables(), *self.s2.variables()}
 
 class Assume(Stmt):
     def __init__(self, e : Expr):
@@ -171,6 +204,9 @@ class Assume(Stmt):
     
     def __repr__(self):
         return f'(Assume {self.e})'
+    
+    def variables(self):
+        return {*self.e.variables()}
 
 class Assert(Stmt):
     def __init__(self, e):
@@ -178,6 +214,9 @@ class Assert(Stmt):
     
     def __repr__(self):
         return f'(Assert {self.e})'
+    
+    def variables(self):
+        return {*self.e.variables()}
 
 class While(Stmt):
     def __init__(self, invs, cond : Expr, body : Stmt):
@@ -187,3 +226,16 @@ class While(Stmt):
 
     def __repr__(self):
         return f'(While {self.cond} {self.body})'
+    
+    def variables(self):
+        return {*self.body.variables()}
+
+class Havoc(Stmt):
+    def __init__(self, var):
+        self.var = var
+    
+    def __repr__(self):
+        return f'(Havoc {self.var})'
+    
+    def variables(self):
+        return set()

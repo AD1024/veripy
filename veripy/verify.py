@@ -7,6 +7,7 @@ from veripy.parser.parser import parse_assertion, parse_expr
 from functools import wraps
 from veripy.transformer import *
 from functools import reduce
+from veripy.prettyprint import pretty_print
 from veripy import typecheck as tc
 
 class VerificationStore:
@@ -30,20 +31,21 @@ class VerificationStore:
         if self.scope:
             return self.scope[-1]
     
-    def push_verification(self, verification_func):
+    def push_verification(self, func_name, verification_func):
         if self.switch:
             if not self.scope:
                 raise Exception('No Scope Defined')
-            self.store[self.scope[-1]]['vf'].append(verification_func)
+            self.store[self.scope[-1]]['vf'].append((func_name, verification_func))
     
     def verify(self, scope, ignore_err):
         if self.switch and self.store:
             print(f'=> Verifying Scope `{scope}`')
             verifications = self.store[scope]
-            for f in verifications['vf']:
+            for f_name, f in verifications['vf']:
                 try:
                     f()
                 except Exception as e:
+                    print(f'Exception encountered while verifying {scope}::{f_name}')
                     if not ignore_err:
                         raise e
                     else:
@@ -105,14 +107,14 @@ def assume(C):
     if not C:
         raise RuntimeError('Assumption Violation')
 
-def wp_seq(stmt, Q):
-    (p2, c2) = wp(stmt.s2, Q)
-    (p1, c1) = wp(stmt.s1, p2)
+def wp_seq(sigma, stmt, Q):
+    (p2, c2) = wp(sigma, stmt.s2, Q)
+    (p1, c1) = wp(sigma, stmt.s1, p2)
     return (p1, c1.union(c2))
 
-def wp_if(stmt, Q):
-    (p1, c1) = wp(stmt.lb, Q)
-    (p2, c2) = wp(stmt.rb, Q)
+def wp_if(sigma, stmt, Q):
+    (p1, c1) = wp(sigma, stmt.lb, Q)
+    (p2, c2) = wp(sigma, stmt.rb, Q)
     return (
         BinOp(
             BinOp(stmt.cond, BoolOps.Implies, p1),
@@ -136,15 +138,16 @@ def wp_while(stmt, Q):
         BinOp(BinOp(combined_invars, BoolOps.And, (UnOp(BoolOps.Not, cond))), BoolOps.Implies, Q)
     }))
 
-def wp(stmt, Q):
+def wp(sigma, stmt, Q):
     return {
-        Skip: lambda: (Q, set()),
+        Skip:   lambda: (Q, set()),
+        Assume:  lambda: (BinOp(stmt.e, BoolOps.Implies, Q), set()),
         Assign: lambda: (subst(stmt.var, stmt.expr, Q), set()),
         Assert: lambda: (BinOp(Q, BoolOps.And, stmt.e), set()),
-        Seq:    lambda: wp_seq(stmt, Q),
-        While:  lambda: wp_while(stmt, Q),
-        If:     lambda: wp_if(stmt, Q)
-    }.get(type(stmt), (None, None))()
+        Seq:    lambda: wp_seq(sigma, stmt, Q),
+        If:     lambda: wp_if(sigma, stmt, Q),
+        Havoc:  lambda: (Quantification(Var(stmt.var + '$'), subst(stmt.var, Var(stmt.var + '$'),Q), ty=sigma[stmt.var]), set())
+    }.get(type(stmt), lambda: raise_exception(f'wp not implemented for {type(stmt)}'))()
 
 def emit_smt(translator: Expr2Z3, solver, constraint : Expr, fail_msg : str):
     solver.push()
@@ -165,20 +168,20 @@ def fold_constraints(constraints : List[str]):
     else:
         return Literal(VBool(True))
 
-def verify_func(func, scope, inputs, ensures, requires):
+def verify_func(func, scope, inputs, requires, ensures):
     code = inspect.getsource(func)
     func_ast = ast.parse(code)
     target_language_ast = StmtTranslator().visit(func_ast)
     func_attrs = STORE.get_func_attrs(scope, func.__name__)
     sigma = tc.type_check_stmt(func_attrs['inputs'], func_attrs, target_language_ast)
 
-    user_precond = fold_constraints(ensures)
-    user_postcond = fold_constraints(requires)
+    user_precond = fold_constraints(requires)
+    user_postcond = fold_constraints(ensures)
 
     tc.type_check_expr(sigma, func_attrs, TBOOL, user_precond)
     tc.type_check_expr(sigma, func_attrs, TBOOL, user_postcond)
 
-    (P, C) = wp(target_language_ast, user_postcond)
+    (P, C) = wp(sigma, target_language_ast, user_postcond)
     check_P = BinOp(user_precond, BoolOps.Implies, P)
 
     solver = z3.Solver()
@@ -227,6 +230,6 @@ def verify(inputs: List[Tuple[str, tc.types.SUPPORTED]]=[], requires: List[str]=
         types = parse_func_types(func, inputs=inputs)
         scope = STORE.current_scope()
         STORE.insert_func_attr(scope, func.__name__, types[0], types[1], types[2], requires, ensures)
-        STORE.push_verification(lambda: verify_func(func, scope, inputs, requires, ensures))
+        STORE.push_verification(func.__name__, lambda: verify_func(func, scope, inputs, requires, ensures))
         return caller
     return verify_impl

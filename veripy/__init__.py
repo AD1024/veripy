@@ -6,6 +6,7 @@ from veripy.verify import (verify, assume, invariant, do_verification,
 from veripy.prettyprint import pretty_print
 
 import veripy.built_ins
+import veripy.log
 
 __all__ = [
     'parser',
@@ -13,6 +14,7 @@ __all__ = [
     'verify',
     'enable_verification',
     'scope',
+    'log',
     'do_verification',
     'verify_all',
     'transformer',

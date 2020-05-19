@@ -1,6 +1,7 @@
 from veripy.parser.syntax import *
 from veripy.typecheck.types import *
 from veripy.built_ins import FUNCTIONS
+from veripy.log import log
 
 def type_check_stmt(sigma : dict, func_sigma : dict, stmt : Stmt):
     if isinstance(stmt, Skip):
@@ -29,6 +30,10 @@ def type_check_stmt(sigma : dict, func_sigma : dict, stmt : Stmt):
         for i in stmt.invariants:
             type_check_expr(sigma, func_sigma, TBOOL, i)
         return type_check_stmt(sigma, func_sigma, stmt.body)
+    if isinstance(stmt, Havoc):
+        return sigma
+    
+    raise NotImplementedError(f'type check not implemented for: {type(stmt)}')
 
 def type_check_expr(sigma: dict, func_sigma : dict, expected, expr: Expr):
     actual = type_infer_expr(sigma, func_sigma, expr)
@@ -38,7 +43,7 @@ def type_check_expr(sigma: dict, func_sigma : dict, expected, expr: Expr):
     if actual == expected:
         return expected
     else:
-        raise TypeError(f'expected type {expected}, actual type {actual}')
+        raise TypeError(f'{expr}: expected type {expected}, actual type {actual}')
 
 ###################
 # Type Inference  #

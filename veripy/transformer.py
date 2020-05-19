@@ -4,6 +4,7 @@ from veripy.parser.syntax import *
 from veripy.parser.parser import parse_assertion
 from veripy.built_ins import BUILT_INS
 from veripy.typecheck.types import *
+from functools import reduce
 
 def raise_exception(msg):
     raise Exception(msg)
@@ -28,7 +29,6 @@ def subst(this, withThis, inThis):
     raise NotImplementedError(f'Substitution not implemented for {type(inThis)}')
 
 class ExprTranslator:
-
     def fold_binops(self, op, values):
         result = BinOp(self.visit(values[0]), op, self.visit(values[1]))
         for e in values[2:]:
@@ -126,12 +126,12 @@ class StmtTranslator:
     def __init__(self):
         self.expr_translator = ExprTranslator()
 
-    def make_seq(self, stmts):
+    def make_seq(self, stmts, need_visit=True):
         if stmts:
             hd, *stmts = stmts
-            t_node = self.visit(hd)
+            t_node = self.visit(hd) if need_visit else hd
             while stmts:
-                t2_node, stmts = self.visit(stmts[0]), stmts[1:]
+                t2_node, stmts = self.visit(stmts[0]) if need_visit else stmts[0], stmts[1:]
                 t_node = Seq(t_node, t2_node)
             if not isinstance(t_node, Seq):
                 return Seq(t_node, Skip())
@@ -171,7 +171,23 @@ class StmtTranslator:
         invars = [self.visit_Call(x.value) for x in filter(is_invariant, node.body)]
         body = self.make_seq(list(filter(lambda x: True if not isinstance(x, ast.Expr) or not isinstance(x.value, ast.Call)
                                                         else x.value.func.id != 'invariant', node.body)))
-        return While(invars, cond, body)
+        loop_targets = body.variables()
+        havocs = list(map(Havoc, loop_targets))
+        invariants = Literal (VBool (True)) if not invars \
+                      else reduce(lambda i1, i2: BinOp(i1, BoolOps.And, i2), invars)
+        return self.make_seq(
+            [   Assert(invariants),
+                *havocs,
+                Assume(invariants),
+                If(cond,
+                    self.make_seq(
+                        [   body,
+                            Assert(invariants),
+                            Assume(Literal(VBool(False)))
+                        ], need_visit=False),
+                    Skip())
+            ]
+        , need_visit=False)
     
     def visit_If(self, node):
         cond = self.expr_translator.visit(node.test)

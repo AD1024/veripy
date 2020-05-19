@@ -14,6 +14,6 @@ Work-In-Progress
 - [x] Basic Verification with control flows
 - [ ] Arrays
 - [x] Quantifiers
-- [ ] `Havoc` for `while`
+- [x] `Havoc` for `while`
 - [ ] Function calls
 - [ ] More AST mappings

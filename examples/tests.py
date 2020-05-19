@@ -59,10 +59,7 @@ def test_func2(a : int, b : int) -> int:
         invariant('ans == (a - i) * b')
         j = b
         while j > 0:
-            invariant('i > 0')
             invariant('j >= 0')
-            invariant('a >= 0')
-            invariant('b >= 0')
             invariant('(i > 0) ==> (ans == ((a - i) * b) + (b - j))')
             ans = ans + 1
             j = j - 1
@@ -137,7 +134,7 @@ veripy.scope('mod')
 
 @verify(
     requires=['n >= 0'],
-    ensures=['ans == True']
+    ensures=['ans <==> True']
 )
 def test_mod(n) -> bool:
     m = (n * 2) % 2
