@@ -6,6 +6,12 @@ class Type: pass
 class TARR(Type):
     def __init__(self, ty):
         self.ty = ty
+    
+    def __str__(self):
+        return f'List[{self.ty}]'
+    
+    def __repr__(self):
+        return self.__str__()
 
 class TTUP(Type):
     def __init__(self, ty):
@@ -32,7 +38,7 @@ def name_to_ast_type(node):
     }.get(node.id, TANY)
 
 def subscript_to_ast_type(node):
-    ty_contr = node.value
+    ty_contr = node.value.id
     if node.slice == None:
         return TANY
     

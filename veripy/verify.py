@@ -146,7 +146,7 @@ def wp(sigma, stmt, Q):
         Assert: lambda: (BinOp(Q, BoolOps.And, stmt.e), set()),
         Seq:    lambda: wp_seq(sigma, stmt, Q),
         If:     lambda: wp_if(sigma, stmt, Q),
-        Havoc:  lambda: (Quantification(Var(stmt.var + '$'), subst(stmt.var, Var(stmt.var + '$'),Q), ty=sigma[stmt.var]), set())
+        Havoc:  lambda: (Quantification(Var(stmt.var + '$0'), subst(stmt.var, Var(stmt.var + '$0'), Q), ty=sigma[stmt.var]), set())
     }.get(type(stmt), lambda: raise_exception(f'wp not implemented for {type(stmt)}'))()
 
 def emit_smt(translator: Expr2Z3, solver, constraint : Expr, fail_msg : str):

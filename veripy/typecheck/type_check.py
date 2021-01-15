@@ -45,9 +45,9 @@ def type_check_expr(sigma: dict, func_sigma : dict, expected, expr: Expr):
     else:
         raise TypeError(f'{expr}: expected type {expected}, actual type {actual}')
 
-###################
-# Type Inference  #
-###################
+###############################################
+#               Type Inference                #
+###############################################
 
 def type_infer_literal(sigma, func_sigma, expr):
     return {

@@ -2,14 +2,18 @@ import ast
 import z3
 from veripy.parser.syntax import *
 from veripy.parser.parser import parse_assertion
-from veripy.built_ins import BUILT_INS
+from veripy.built_ins import BUILT_INS, FUNCTIONS
 from veripy.typecheck.types import *
 from functools import reduce
+from typing import List
 
-def raise_exception(msg):
+def raise_exception(msg : str):
     raise Exception(msg)
 
-def subst(this, withThis, inThis):
+def subst(this : str, withThis : Expr, inThis : Expr) -> Expr:
+    '''
+    Substitute a variable (`this`) with `withThis` in expression `inThis` and return the resulted expression
+    '''
     if isinstance(inThis, Var):
         if inThis.name == this:
             return withThis
@@ -22,14 +26,19 @@ def subst(this, withThis, inThis):
     if isinstance(inThis, UnOp):
         return UnOp(inThis.op, subst(this, withThis, inThis.e))
     if isinstance(inThis, Quantification):
-        return Quantification(inThis.var, subst(this, withThis, inThis.expr), inThis.ty)
+        if this != inThis.var:
+            return Quantification(inThis.var, subst(this, withThis, inThis.expr), inThis.ty)
+        return inThis
     if isinstance(inThis, FunctionCall):
         return inThis
     
     raise NotImplementedError(f'Substitution not implemented for {type(inThis)}')
 
 class ExprTranslator:
-    def fold_binops(self, op, values):
+    '''
+    Translator that can convert a Python expression AST to veripy AST
+    '''
+    def fold_binops(self, op : Op, values : List[Expr]):
         result = BinOp(self.visit(values[0]), op, self.visit(values[1]))
         for e in values[2:]:
             result = BinOp(result, op, self.visit(e))
@@ -94,8 +103,18 @@ class ExprTranslator:
     def visit_Index(self, node):
         return self.visit(node.value)
     
+    def visit_Call(self, node):
+        func = node.func.id
+        if func in BUILT_INS:
+            if func == 'assume':
+                return Assume(parse_assertion(node.args[0].s))
+            if func == 'invariant':
+                return parse_assertion(node.args[0].s)
+        else:
+            return FunctionCall(Var(func), list(map(lambda x: Var(x.id), node.args)))
+    
     def visit_Slice(self, node):
-        lo, ho, step = [None] * 3
+        lo, hi, step = [None] * 3
         if node.lower:
             lo = self.visit(node.lower)
         if node.upper:
@@ -118,15 +137,27 @@ class ExprTranslator:
                 ast.BoolOp:         lambda: self.visit_BoolOp(node),
                 ast.NameConstant:   lambda: self.visit_NameConstant(node),
                 ast.Num:            lambda: self.visit_Num(node),
-                ast.UnaryOp:        lambda: self.visit_UnaryOp(node)
+                ast.UnaryOp:        lambda: self.visit_UnaryOp(node),
+                ast.Call:           lambda: self.visit_Call(node),
+                ast.Subscript:      lambda: self.visit_Subscript(node),
+                ast.Index:          lambda: self.visit_Index(node),
             }.get(type(node), lambda: raise_exception(f'Expr not supported: {node}'))()
 
 class StmtTranslator:
-
+    '''
+    Translator that can convert a Python statement AST to veripy AST
+    '''
     def __init__(self):
         self.expr_translator = ExprTranslator()
 
     def make_seq(self, stmts, need_visit=True):
+        '''
+        Fold a list of statements to `Seq` node.
+        Argument:
+            - stmts         : the list of statements to fold
+            - need_visit    : each node in `stmts` will be first visited before filling into `Seq` if
+                              `need_visit` is True; otherwise, each node will be filled in directly.
+        '''
         if stmts:
             hd, *stmts = stmts
             t_node = self.visit(hd) if need_visit else hd
@@ -147,7 +178,7 @@ class StmtTranslator:
             if func == 'invariant':
                 return parse_assertion(node.args[0].s)
         else:
-            raise Exception('Currently function call is not supported')
+            return FunctionCall(Var(func), list(map(lambda x: Var(x.id), node.args)))
     
     def visit_FunctionDef(self, node):
         return self.make_seq(node.body)
@@ -164,12 +195,24 @@ class StmtTranslator:
         return Assign(varname, expr)
 
     def visit_While(self, node):
+        '''
+        Visit the while statement. The conversion rule is:
+            While e S
+            ==>
+            assert invariant
+            havoc x (for all x referred in S)
+            assume invariant
+            if e then S;assert invariants;assume false
+            else skip
+        '''
         cond = self.expr_translator.visit(node.test)
         is_invariant = lambda y: isinstance(y, ast.Expr)\
                                 and isinstance(y.value, ast.Call)\
                                 and y.value.func.id == 'invariant'
+        # Since invariants are speicified using a dummy function call, here we can use this directly
         invars = [self.visit_Call(x.value) for x in filter(is_invariant, node.body)]
-        body = self.make_seq(list(filter(lambda x: True if not isinstance(x, ast.Expr) or not isinstance(x.value, ast.Call)
+        body = self.make_seq(list(filter(lambda x: True if not isinstance(x, ast.Expr)
+                                                           or not isinstance(x.value, ast.Call)
                                                         else x.value.func.id != 'invariant', node.body)))
         loop_targets = body.variables()
         havocs = list(map(Havoc, loop_targets))
@@ -207,12 +250,15 @@ class StmtTranslator:
                 ast.Assert:      lambda: self.visit_Assert(node),
                 ast.Assign:      lambda: self.visit_Assign(node),
                 ast.Return:      lambda: self.visit_Return(node),
+                ast.Call:        lambda: self.visit_Call(node),
                 ast.Pass:        lambda: Skip()
             }.get(type(node), lambda: raise_exception(f'Stmt not supported: {node}'))()
 
 
 class Expr2Z3:
-
+    '''
+    Translator that translates a veripy expression AST to a Z3 constraint
+    '''
     def __init__(self, name_dict: dict):
         self.name_dict = name_dict
 
@@ -224,17 +270,17 @@ class Expr2Z3:
         if isinstance(ty, TARR):
             return z3.ArraySort(z3.IntSort(), self.translate_type(ty.ty))
 
-    def visit_Literal(self, lit):
+    def visit_Literal(self, lit : Literal):
         v = lit.value
         return {
             VBool: lambda: v.v,
             VInt: lambda: v.v
         }.get(type(v), lambda: raise_exception(f'Unsupported data: {v}'))()
 
-    def visit_Var(self, node):
+    def visit_Var(self, node : Var):
         return self.name_dict[node.name]
     
-    def visit_BinOp(self, node):
+    def visit_BinOp(self, node : BinOp):
         c1 = self.visit(node.e1)
         c2 = self.visit(node.e2)
         return {
@@ -257,7 +303,7 @@ class Expr2Z3:
             CompOps.Le:         lambda: c1 <= c2
         }.get(node.op, lambda: raise_exception(f'Unsupported Operator: {node.op}'))()
     
-    def visit_UnOp(self, node):
+    def visit_UnOp(self, node : UnOp):
         c = self.visit(node.e)
         return {
             ArithOps.Neg: lambda: -c,
@@ -278,7 +324,7 @@ class Expr2Z3:
         else:
             raise Exception(f'Unsupported quantified type: {node.ty}')
 
-    def visit(self, expr):
+    def visit(self, expr : Expr):
         return {
             Literal:            lambda: self.visit_Literal(expr),
             Var:                lambda: self.visit_Var(expr),

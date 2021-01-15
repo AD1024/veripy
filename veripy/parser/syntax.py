@@ -58,7 +58,7 @@ class Var(Expr):
         self.name = name
     
     def __repr__(self):
-        return f'Var {self.name}'
+        return f'(Var {self.name})'
     
     def variables(self):
         return {self.name}
@@ -137,7 +137,7 @@ class Subscript(Expr):
         return f'(Subscript {self.var} {self.subscript})'
     
     def variables(self):
-        return {self.var.name}
+        return self.var.variables().union(self.subscript.variables())
 
 class Quantification(Expr):
     '''
