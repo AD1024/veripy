@@ -1,21 +1,12 @@
 import typing
 import ast
 
+TINT = int
+TBOOL = bool
+TSLICE = typing.TypeVar('Slice')
+TANY = typing.Any
+
 class Type: pass
-
-class TARR(Type):
-    def __init__(self, ty):
-        self.ty = ty
-    
-    def __str__(self):
-        return f'List[{self.ty}]'
-    
-    def __repr__(self):
-        return self.__str__()
-
-class TTUP(Type):
-    def __init__(self, ty):
-        self.ty = ty
 
 class TARROW(Type):
     def __init__(self, t1, t2):
@@ -25,11 +16,6 @@ class TARROW(Type):
 class TPROD(Type):
     def __init__(self, *types):
         self.types = tuple(types)
-
-TINT = typing.TypeVar('Int')
-TBOOL = typing.TypeVar('Bool')
-TSLICE = typing.TypeVar('Slice')
-TANY = typing.TypeVar('Any')
 
 def name_to_ast_type(node):
     return {
@@ -44,9 +30,9 @@ def subscript_to_ast_type(node):
     
     ty_arg = to_ast_type(node.slice.value)
     return {
-        'List' : TARR,
-        'Tuple': TTUP
-    }.get(ty_contr, lambda _: TANY)(ty_arg)
+        'List' : typing.List,
+        'Tuple': typing.Tuple
+    }.get(ty_contr, lambda _: TANY)[ty_arg]
 
 def to_ast_type(ty):
     return {
@@ -55,7 +41,7 @@ def to_ast_type(ty):
     }.get(type(ty), lambda _: TANY)(ty)
 
 BUILT_IN_FUNC_TYPE = {
-    'len' : TARROW(TARR, TINT)
+    'len' : TARROW(typing.Sequence[typing.Any], TINT)
 }
 
-SUPPORTED = typing.Union[TINT, TBOOL, TARR]
+SUPPORTED = typing.Union[TINT, TBOOL, typing.List]

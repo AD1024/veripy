@@ -124,12 +124,18 @@ class ExprTranslator:
         
         return Slice(lo, hi, step)
 
-
     def visit_Subscript(self, node):
         v = self.visit(node.value)
         return Subscript(v, self.visit(node.slice))
+
+    def visit_Constant(self, node):
+        assert isinstance(node, ast.Constant)
+        value = node.value
+        return Literal (VInt (value))
     
     def visit(self, node):
+        # if isinstance(node, ast.Constant):
+        #     print(dir(node), node.s, node.n, node.value)
         return {
                 ast.BinOp:          lambda: self.visit_BinOp(node),
                 ast.Name:           lambda: self.visit_Name(node),
@@ -141,6 +147,7 @@ class ExprTranslator:
                 ast.Call:           lambda: self.visit_Call(node),
                 ast.Subscript:      lambda: self.visit_Subscript(node),
                 ast.Index:          lambda: self.visit_Index(node),
+                ast.Constant:       lambda: self.visit_Constant(node),
             }.get(type(node), lambda: raise_exception(f'Expr not supported: {node}'))()
 
 class StmtTranslator:
@@ -190,7 +197,11 @@ class StmtTranslator:
         return Skip()
 
     def visit_Assign(self, node):
-        varname = node.targets[0].id
+        if isinstance(node.targets[0], ast.Subscript):
+            varname = self.expr_translator.visit(node.targets[0])
+            print(varname)
+        else:
+            varname = node.targets[0].id
         expr = self.expr_translator.visit(node.value)
         return Assign(varname, expr)
 

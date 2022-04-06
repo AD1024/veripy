@@ -4,6 +4,7 @@ import ast
 import veripy
 from veripy import *
 from veripy import invariant
+from typing import List
 
 veripy.enable_verification()
 veripy.scope('test')
@@ -181,4 +182,17 @@ def de_morgan() -> None:
 def make_intuitionists_mad() -> None:
     pass
 
-veripy.verify_all()
+veripy.scope('lists')
+
+@verify(
+    requires=['len(xs) > 0'],
+    ensures=['ans == 111']
+)
+def simpl_array_operations(xs: List[int]) -> int:
+    xs[0] = 111
+    ans = xs[0]
+    return ans
+
+# veripy.verify_all()
+veripy.do_verification('summation')
+# veripy.do_verification('lists', ignore_err=False)
